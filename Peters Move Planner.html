@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<!-- saved from url=(0061)file:///C:/Users/bpete/Downloads/peters-family-planner_5.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Move Plan">
+<title>Peters Move Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link href="./Peters Move Planner_files/css2" rel="stylesheet">
+<script src="./Peters Move Planner_files/firebase-app-compat.js.download"></script>
+<script src="./Peters Move Planner_files/firebase-firestore-compat.js.download"></script>
+<style>
+:root{
+  --ink:#1C2541;--paper:#F7F4ED;--card:#FFFFFF;--line:#DEDACC;
+  --accent:#2E7D6B;--accent-soft:#DEEEE9;--warm:#D98A4A;--warm-soft:#F6E7D8;
+  --alert:#B5482F;--alert-soft:#F5E0D9;--muted:#7A7E94;--radius:14px;
+  --display:'Space Grotesk',system-ui,sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height:100vh;padding-bottom:84px;-webkit-tap-highlight-color:transparent}
+h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-0.01em}
+
+/* HEADER */
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 8px;gap:10px}
+.app-header h1{font-size:1.12rem;font-weight:700}
+.sync-label{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted)}
+.sync-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);transition:background .4s}
+.sync-dot.on{background:var(--accent)}
+
+/* SETUP BANNER */
+.setup-banner{margin:0 14px 8px;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);font-size:.86rem;line-height:1.55}
+.setup-banner.hidden{display:none}
+.setup-banner h2{font-size:.95rem;margin-bottom:6px}
+.setup-banner ol{margin:8px 0 0;padding-left:20px}
+.setup-banner li{margin-bottom:5px}
+.setup-banner code{background:var(--accent-soft);padding:1px 5px;border-radius:5px;font-size:.8em;word-break:break-all}
+.setup-banner .dismiss{margin-top:10px;background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:.78rem;color:var(--muted);font-family:var(--body);cursor:pointer}
+
+/* TOAST */
+.toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:30px;font-size:.82rem;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;z-index:99}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+main{padding:6px 14px 20px}
+.view{display:none}
+.view.active{display:block}
+
+/* BOARDING PASS STUB — signature element */
+.pass-stub{position:relative;background:var(--ink);color:var(--paper);border-radius:var(--radius);padding:20px 20px 22px;overflow:hidden;margin-bottom:14px}
+.pass-stub::before{content:'';position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.04)}
+.pass-eyebrow{font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;color:rgba(247,244,237,.5);margin-bottom:5px}
+.pass-week{font-size:2.8rem;font-weight:700;line-height:1;font-family:var(--display)}
+.pass-sub{font-size:.82rem;color:rgba(247,244,237,.65);margin-top:3px}
+.pass-bar{height:7px;border-radius:4px;background:rgba(247,244,237,.14);overflow:hidden;margin-top:18px}
+.pass-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .6s}
+.pass-row{display:flex;justify-content:space-between;margin-top:12px;gap:8px}
+.pass-stat .plabel{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,244,237,.45)}
+.pass-stat .pval{font-size:.95rem;font-weight:600;font-family:var(--display)}
+
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px}
+.stat-card .label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.stat-card .value{font-size:1.26rem;font-weight:700;font-family:var(--display)}
+.stat-card .value.neg{color:var(--alert)}
+
+/* FLAGS */
+.flag{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius);margin-bottom:10px;font-size:.86rem;line-height:1.5}
+.flag.alert{background:var(--alert-soft)}
+.flag.ok{background:var(--accent-soft)}
+.flag.warn{background:var(--warm-soft)}
+.flag .mark{font-family:var(--display);font-weight:700;font-size:.95rem;flex-shrink:0;margin-top:1px}
+.flag.alert .mark{color:var(--alert)}
+.flag.ok .mark{color:var(--accent)}
+.flag.warn .mark{color:var(--warm)}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px}
+.card-title{font-size:.95rem;font-weight:700;font-family:var(--display);margin-bottom:10px}
+.card-title .sub{font-weight:400;color:var(--muted);font-size:.78rem;font-family:var(--body)}
+.section-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:8px 0 4px;border-bottom:1px solid var(--line);margin-bottom:2px}
+
+/* ROWS */
+.row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row .name{flex:1;min-width:0;font-size:.9rem}
+.row input.name-input{border:none;background:none;font-family:var(--body);font-size:.9rem;color:var(--ink);width:100%;padding:2px 0}
+.row input.name-input:focus{outline:none;border-bottom:1px solid var(--accent)}
+.row .note-text{font-size:.74rem;color:var(--muted);line-height:1.35;margin-top:2px}
+.amount-input{width:100px;text-align:right;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-family:var(--body);font-size:.9rem;color:var(--ink);background:var(--paper)}
+.amount-input:focus{outline:none;border-color:var(--accent)}
+.del-btn{border:none;background:none;color:var(--muted);font-size:1.1rem;line-height:1;padding:2px 5px;cursor:pointer;flex-shrink:0}
+.total-row{font-weight:700;font-size:.9rem;padding-top:8px;border-bottom:none}
+.add-row{display:flex;gap:8px;margin-top:10px}
+.add-row input[type=text]{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:var(--body);font-size:.88rem;background:var(--paper);color:var(--ink)}
+.add-row input:focus{outline:none;border-color:var(--accent)}
+.add-btn{border:none;background:var(--ink);color:var(--paper);border-radius:8px;padding:8px 16px;font-family:var(--display);font-weight:600;font-size:.85rem;cursor:pointer}
+
+/* FIELDS */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-family:var(--body);font-size:.92rem;background:var(--paper);color:var(--ink)}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+.field textarea{min-height:90px;resize:vertical}
+.help{font-size:.76rem;color:var(--muted);margin:-6px 0 10px;line-height:1.4}
+
+/* WEEK NAV */
+.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px}
+.week-nav button{border:1px solid var(--line);background:var(--card);border-radius:8px;width:38px;height:38px;font-size:1.1rem;font-family:var(--display);color:var(--ink);cursor:pointer}
+.week-nav .range{font-size:.9rem;font-weight:600;text-align:center}
+.week-nav .range small{display:block;font-weight:400;color:var(--muted);font-size:.74rem}
+
+/* TIMELINE */
+.filters{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.filters button{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:6px 13px;font-size:.8rem;font-family:var(--body);color:var(--muted);cursor:pointer}
+.filters button.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.task{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.task:last-child{border-bottom:none}
+.task input[type=checkbox]{width:19px;height:19px;margin-top:1px;accent-color:var(--accent);flex-shrink:0}
+.task .txt{flex:1;font-size:.88rem;line-height:1.4}
+.task .twhen{font-size:.72rem;color:var(--muted);margin-top:2px}
+.task .tnote{font-size:.73rem;color:var(--muted);margin-top:3px;line-height:1.35;font-style:italic}
+.task.done .txt{color:var(--muted);text-decoration:line-through}
+.task .twho{font-size:.7rem;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:2px 7px;flex-shrink:0;white-space:nowrap;margin-top:1px}
+.progress-bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.progress-bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
+
+/* TAB BAR */
+.tabbar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:10}
+.tabbar button{flex:1;border:none;background:none;font-family:var(--display);font-weight:600;font-size:.72rem;color:var(--muted);padding:6px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1}
+.tabbar button .dot{width:5px;height:5px;border-radius:50%;background:transparent}
+.tabbar button.active{color:var(--ink)}
+.tabbar button.active .dot{background:var(--accent)}
+
+.empty{font-size:.85rem;color:var(--muted);padding:10px 0;text-align:center}
+
+/* ARCHIVE UI */
+.archived-toggle{font-size:.78rem;color:var(--muted);text-align:center;padding:10px 0 2px;cursor:pointer;border-top:1px dashed var(--line);margin-top:6px}
+.archived-list{margin-top:4px}
+.archived-list.hidden{display:none}
+.archived-row{opacity:.6}
+.archived-row .name{font-size:.85rem}
+.archived-amount{font-size:.85rem;color:var(--muted);min-width:60px;text-align:right}
+
+/* TASK NOTE EDIT */
+.note-edit{width:100%;margin-top:6px;border:1px solid var(--line);border-radius:8px;padding:8px 9px;font-family:var(--body);font-size:.82rem;background:var(--paper);color:var(--ink);min-height:60px;resize:vertical}
+.note-edit:focus{outline:none;border-color:var(--accent)}
+.task .txt{cursor:pointer}
+
+/* BILL TAGS */
+.bill-tag{font-size:.68rem;border:none;border-radius:6px;padding:2px 7px;margin-top:3px;display:inline-block;font-family:var(--body)}
+.bill-tag.tag-Priority{background:var(--accent-soft);color:var(--accent)}
+.bill-tag.tag-Optional{background:var(--line);color:var(--muted)}
+.bill-tag.tag-Refundable{background:var(--warm-soft);color:var(--warm)}
+.tag-select{border:1px solid var(--line);border-radius:6px;font-size:.72rem;padding:3px 5px;background:var(--paper);color:var(--ink);font-family:var(--body);margin-top:4px}
+.bill-filters{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.bill-filters button{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:5px 12px;font-size:.76rem;font-family:var(--body);color:var(--muted);cursor:pointer}
+.bill-filters button.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* EXPORT BUTTON */
+.export-btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:8px 16px;font-family:var(--display);font-weight:600;font-size:.82rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+
+/* DUE DATES */
+.due-badge{font-size:.68rem;border-radius:6px;padding:1px 6px;margin-left:4px;display:inline-block;font-family:var(--body)}
+.due-badge.due-normal{background:var(--line);color:var(--muted)}
+.due-badge.due-soon{background:var(--warm-soft);color:var(--warm)}
+.due-badge.due-overdue{background:var(--alert-soft);color:var(--alert)}
+.task.status-overdue{border-left:3px solid var(--alert);padding-left:7px;margin-left:-10px}
+.task.status-soon{border-left:3px solid var(--warm);padding-left:7px;margin-left:-10px}
+
+/* SORT ROW */
+.sort-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.sort-btn{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:6px 12px;font-size:.76rem;font-family:var(--body);color:var(--muted);cursor:pointer}
+.sort-btn.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* EXPAND PANEL */
+.expand-panel{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.mini-label{display:block;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:8px 0 4px}
+.mini-label:first-child{margin-top:0}
+.date-input{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-family:var(--body);font-size:.85rem;background:var(--paper);color:var(--ink)}
+.date-input:focus{outline:none;border-color:var(--accent)}
+
+/* COMMENTS */
+.comment-count{font-size:.74rem;color:var(--accent);margin-top:3px}
+.comments-list{margin-bottom:6px}
+.comment-item{font-size:.82rem;padding:6px 0;border-bottom:1px solid var(--line);line-height:1.4}
+.comment-item:last-child{border-bottom:none}
+.comment-author{font-weight:600;color:var(--ink)}
+.comment-input{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:var(--body);font-size:.85rem;background:var(--paper);color:var(--ink)}
+.comment-input:focus{outline:none;border-color:var(--accent)}
+
+/* VARIANCE */
+.variance-tag{font-size:.74rem;border-radius:6px;padding:1px 6px;margin-left:6px}
+.variance-tag.over{background:var(--alert-soft);color:var(--alert)}
+.variance-tag.under{background:var(--accent-soft);color:var(--accent)}
+
+/* REMINDER BANNER */
+.reminder-banner{background:var(--warm-soft);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:.85rem;line-height:1.5}
+.reminder-banner .rb-title{font-weight:700;font-family:var(--display);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.reminder-banner .rb-item{padding:3px 0}
+.reminder-banner .rb-dismiss{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:0 4px}
+
+/* SCENARIOS */
+.scenario-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.scenario-chip{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:6px 13px;font-size:.8rem;font-family:var(--body);color:var(--muted);cursor:pointer}
+.scenario-chip.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.scenario-badge{display:inline-block;background:var(--warm-soft);color:var(--warm);font-size:.7rem;border-radius:6px;padding:2px 8px;margin-left:8px;font-family:var(--body);vertical-align:middle}
+</style>
+</head>
+<body>
+
+
+<header class="app-header">
+  <h1>Peters Move Planner</h1>
+  <span class="sync-label"><span class="sync-dot on" id="syncDot"></span><span id="syncText">Synced</span></span>
+</header>
+
+<div class="setup-banner hidden" id="setupBanner">
+  <h2>Enable family sync</h2>
+  <p>This app saves to this device only until you connect Firebase. To share live data with everyone in the family:</p>
+  <ol>
+    <li>Go to <code>console.firebase.google.com</code> and create a free project.</li>
+    <li>Open <strong>Build → Firestore Database</strong> and create a database in <strong>test mode</strong>.</li>
+    <li>Go to Project settings → Your apps → add a <strong>Web app</strong> and copy the <code>firebaseConfig</code> shown.</li>
+    <li>Open this HTML file in a text editor, find <code>FIREBASE_CONFIG</code> near the top of the &lt;script&gt;, and replace the placeholder values with yours.</li>
+    <li>Save, then send the same file to everyone. All copies read and write the same shared data automatically.</li>
+  </ol>
+  <button class="dismiss" id="dismissSetup">Got it, hide this</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<main>
+
+  <!-- HOME -->
+  <section class="view active" id="view-home">
+    <div class="scenario-row" id="scenarioRow"><button class="scenario-chip active" data-action="scenario-switch" data-id="base">Base plan</button></div>
+    <div class="pass-stub">
+      <div class="pass-eyebrow" id="homeMoveLabel">Move date · April 1, 2027</div>
+      <div class="pass-week" id="homeWeeks">41</div>
+      <div class="pass-sub" id="homeWeekSub">weeks to go · NZD → CAD</div>
+      <div class="pass-bar"><div class="pass-bar-fill" id="homeBar" style="width: 21.1538%;"></div></div>
+      <div class="pass-row">
+        <div class="pass-stat"><div class="plabel">Cash</div><div class="pval" id="hpCash">$4,000.00</div></div>
+        <div class="pass-stat"><div class="plabel">Debt</div><div class="pval" id="hpDebt">$2,900.00</div></div>
+        <div class="pass-stat"><div class="plabel">Weekly target</div><div class="pval" id="hpTarget">$146.34</div></div>
+      </div>
+    </div>
+    <div class="reminder-banner hidden" id="reminderBanner"></div>
+    <div id="homeFlags"><div class="flag ok"><div class="mark">✓</div><div>Weekly savings target fits within income after fixed bills, with $353.16 to spare each week.</div></div><div class="flag alert"><div class="mark">!</div><div>Canada setup costs convert to approx $24,216.87 NZD, which is $24,216.87 more than the landing funds set aside.</div></div><div class="flag warn"><div class="mark">→</div><div>3 of 34 timeline tasks done. 31 remaining.</div></div></div>
+    <button class="export-btn" id="exportCSV">⇩ Export all data as CSV</button>
+    <button class="export-btn" id="enableNotifs">🔔 Turn on browser reminders</button>
+
+    <div class="card" id="scenarioCard">
+      <div class="card-title">Scenarios <span class="sub">stress-test the plan with different numbers</span></div>
+      <div id="scenarioFields"><div class="empty">You're viewing the base plan. Pick or add a scenario above to try different numbers without changing your real data.</div></div>
+      <div class="add-row">
+        <input type="text" id="newScenarioName" placeholder="New scenario name (e.g. Conservative)">
+        <button class="add-btn" id="addScenario">Add</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEEKLY -->
+  <section class="view" id="view-weekly">
+    <div class="week-nav">
+      <button id="weekPrev">←</button>
+      <div class="range"><span id="weekRangeLabel">15 Jun – 21 Jun</span><small id="weekTotalLabel">Total spend $958.95</small></div>
+      <button id="weekNext">→</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Income this week</div>
+      <div class="row">
+        <div class="name">Take-home pay</div>
+        <input class="amount-input" type="number" inputmode="decimal" id="weekIncomeInput" placeholder="0.00" data-action="week-income">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Fixed bills <span class="sub">edit amounts anytime</span></div>
+      <div class="bill-filters" id="billTagFilters"><button data-billtag="All" class="active">All</button><button data-billtag="Priority" class="">Priority</button><button data-billtag="Optional" class="">Optional</button><button data-billtag="Refundable" class="">Refundable</button></div>
+      <div id="fixedList"><div class="section-label">Bills</div><div class="row"><div class="name"><div>Rent</div><select class="tag-select" data-action="bill-tag" data-id="rent"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="rent" value="650"><button class="del-btn" data-action="bill-archive" data-id="rent" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="rent" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Water</div><select class="tag-select" data-action="bill-tag" data-id="water"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="water" value="14"><button class="del-btn" data-action="bill-archive" data-id="water" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="water" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Power</div><div class="note-text">Check for seasonal increases over winter</div><select class="tag-select" data-action="bill-tag" data-id="power"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="power" value="56"><button class="del-btn" data-action="bill-archive" data-id="power" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="power" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Tithe</div><select class="tag-select" data-action="bill-tag" data-id="tithe"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="tithe" value="0"><button class="del-btn" data-action="bill-archive" data-id="tithe" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="tithe" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Contents Insurance</div><div class="note-text">Confirm policy end date vs move date - may get a refund</div><select class="tag-select" data-action="bill-tag" data-id="contents"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="contents" value="15.96"><button class="del-btn" data-action="bill-archive" data-id="contents" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="contents" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Ains Car Insurance</div><div class="note-text">Cancel when car is sold - check refund policy</div><select class="tag-select" data-action="bill-tag" data-id="ainscar"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="ainscar" value="12.67"><button class="del-btn" data-action="bill-archive" data-id="ainscar" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="ainscar" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Ben Car Insurance</div><div class="note-text">Cancel when car is sold - check refund policy</div><select class="tag-select" data-action="bill-tag" data-id="bencar"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="bencar" value="14.1"><button class="del-btn" data-action="bill-archive" data-id="bencar" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="bencar" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Childcare</div><div class="note-text">Will stop once kids are out of NZ daycare</div><select class="tag-select" data-action="bill-tag" data-id="childcare"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="childcare" value="59"><button class="del-btn" data-action="bill-archive" data-id="childcare" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="childcare" title="Delete permanently">×</button></div><div class="section-label">Vehicles</div><div class="row"><div class="name"><div>Ains Rego</div><div class="note-text">Don't renew if selling close to expiry</div><select class="tag-select" data-action="bill-tag" data-id="ainsrego"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="ainsrego" value="2.61"><button class="del-btn" data-action="bill-archive" data-id="ainsrego" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="ainsrego" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Ben Rego</div><div class="note-text">Don't renew if selling close to expiry</div><select class="tag-select" data-action="bill-tag" data-id="benrego"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="benrego" value="2.61"><button class="del-btn" data-action="bill-archive" data-id="benrego" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="benrego" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Ains WOF</div><select class="tag-select" data-action="bill-tag" data-id="ainswof"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="ainswof" value="10"><button class="del-btn" data-action="bill-archive" data-id="ainswof" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="ainswof" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Ben WOF</div><select class="tag-select" data-action="bill-tag" data-id="benwof"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="benwof" value="10"><button class="del-btn" data-action="bill-archive" data-id="benwof" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="benwof" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>RUC - Ben</div><div class="note-text">Road User Charges - stop topping up once car is sold</div><select class="tag-select" data-action="bill-tag" data-id="ruc"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="ruc" value="19.8"><button class="del-btn" data-action="bill-archive" data-id="ruc" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="ruc" title="Delete permanently">×</button></div><div class="section-label">Subscriptions</div><div class="row"><div class="name"><div>Internet</div><select class="tag-select" data-action="bill-tag" data-id="internet"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="internet" value="18.75"><button class="del-btn" data-action="bill-archive" data-id="internet" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="internet" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Spotify</div><div class="note-text">Could pause/downgrade pre-move to save</div><select class="tag-select" data-action="bill-tag" data-id="spotify"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="spotify" value="7.25"><button class="del-btn" data-action="bill-archive" data-id="spotify" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="spotify" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>MS Office</div><select class="tag-select" data-action="bill-tag" data-id="msoffice"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="msoffice" value="4.25"><button class="del-btn" data-action="bill-archive" data-id="msoffice" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="msoffice" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Ains Phone</div><select class="tag-select" data-action="bill-tag" data-id="ainsphone"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="ainsphone" value="6.5"><button class="del-btn" data-action="bill-archive" data-id="ainsphone" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="ainsphone" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Ben Phone</div><select class="tag-select" data-action="bill-tag" data-id="benphone"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="benphone" value="10"><button class="del-btn" data-action="bill-archive" data-id="benphone" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="benphone" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Ben Gym</div><div class="note-text">Consider cancelling 1-2 months before move</div><select class="tag-select" data-action="bill-tag" data-id="bengym"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="bengym" value="21.95"><button class="del-btn" data-action="bill-archive" data-id="bengym" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="bengym" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Netflix</div><div class="note-text">Could pause/downgrade pre-move to save</div><select class="tag-select" data-action="bill-tag" data-id="netflix"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="netflix" value="8.5"><button class="del-btn" data-action="bill-archive" data-id="netflix" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="netflix" title="Delete permanently">×</button></div><div class="section-label">Canada LOC</div><div class="row"><div class="name"><div>LOC Payment</div><div class="note-text">Currently owing on LOC - see Savings tab</div><select class="tag-select" data-action="bill-tag" data-id="locpayment"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="locpayment" value="10"><button class="del-btn" data-action="bill-archive" data-id="locpayment" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="locpayment" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Transfer Fee</div><div class="note-text">Fee to send NZD → CAD</div><select class="tag-select" data-action="bill-tag" data-id="transferfee"><option value="Priority">Priority</option><option value="Optional">Optional</option><option value="Refundable">Refundable</option></select></div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="transferfee" value="5"><button class="del-btn" data-action="bill-archive" data-id="transferfee" title="Archive">⎘</button><button class="del-btn" data-action="bill-del" data-id="transferfee" title="Delete permanently">×</button></div></div>
+      <div class="add-row">
+        <input type="text" id="newBillName" placeholder="New fixed bill">
+        <button class="add-btn" id="addBill">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Variable spending</div>
+      <div id="variableList"><div class="row"><div class="name">Groceries<div class="note-text">Budget: $260</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="variable-amount" data-id="groceries" value=""></div><div class="row"><div class="name">Petrol<div class="note-text">Budget: $80</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="variable-amount" data-id="petrol" value=""></div><div class="row"><div class="name">Misc.<div class="note-text">Budget: $60</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="variable-amount" data-id="misc" value=""></div><div class="row"><div class="name">Ben Fun<div class="note-text">Budget: $30</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="variable-amount" data-id="benfun" value=""></div><div class="row"><div class="name">Eating Out<div class="note-text">Budget: $50</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="variable-amount" data-id="eatingout" value=""></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Week summary</div>
+      <div id="weekSummary"><div class="row"><div class="name">Fixed bills</div><div>$958.95</div></div><div class="row"><div class="name">Variable spending</div><div>$0.00 <span class="variance-tag under">-$480.00 vs budget</span></div></div><div class="row"><div class="name">Total spend</div><div>$958.95</div></div><div class="row"><div class="name">Income entered</div><div>$0.00</div></div><div class="row total-row"><div class="name">Moving fund this week</div><div class="value neg">—</div></div></div>
+    </div>
+  </section>
+
+  <!-- SAVINGS -->
+  <section class="view" id="view-savings">
+    <div class="card">
+      <div class="card-title">Accounts</div>
+      <div id="accountsList"><div class="row"><div class="name"><div>NZ Chequing (everyday)</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="account-balance" data-id="nzcheq" value="1000"><button class="del-btn" data-action="account-archive" data-id="nzcheq" title="Archive">⎘</button><button class="del-btn" data-action="account-del" data-id="nzcheq" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>NZ Savings Account</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="account-balance" data-id="nzsav" value="3000"><button class="del-btn" data-action="account-archive" data-id="nzsav" title="Archive">⎘</button><button class="del-btn" data-action="account-del" data-id="nzsav" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Canada Savings / Tax Refund Buffer</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="account-balance" data-id="cadsav" value="0"><button class="del-btn" data-action="account-archive" data-id="cadsav" title="Archive">⎘</button><button class="del-btn" data-action="account-del" data-id="cadsav" title="Delete permanently">×</button></div></div>
+      <div class="add-row">
+        <input type="text" id="newAccountName" placeholder="Account name">
+        <button class="add-btn" id="addAccount">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Debts</div>
+      <div id="debtsList"><div class="row"><div class="name"><div>Canada Line of Credit ($25,000 limit)</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="debt-balance" data-id="loc" value="2900"><button class="del-btn" data-action="debt-archive" data-id="loc" title="Archive">⎘</button><button class="del-btn" data-action="debt-del" data-id="loc" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Ainsley's Student Loan (post-Canada, ~6mo after landing)</div><div class="note-text" style="color:var(--warm)">Excluded from savings goal calc</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="debt-balance" data-id="studentloan" value="8000"><button class="del-btn" data-action="debt-archive" data-id="studentloan" title="Archive">⎘</button><button class="del-btn" data-action="debt-del" data-id="studentloan" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Other / Unexpected</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="debt-balance" data-id="otherdebt" value="0"><button class="del-btn" data-action="debt-archive" data-id="otherdebt" title="Archive">⎘</button><button class="del-btn" data-action="debt-del" data-id="otherdebt" title="Delete permanently">×</button></div></div>
+      <div class="add-row">
+        <input type="text" id="newDebtName" placeholder="Debt name">
+        <button class="add-btn" id="addDebt">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Goals &amp; income</div>
+      <div class="field">
+        <label>Savings goal before move (NZD)</label>
+        <input type="number" inputmode="decimal" id="savingsGoalInput" data-action="savings-goal">
+      </div>
+      <div class="field">
+        <label>Conservative weekly income baseline (NZD)</label>
+        <input type="number" inputmode="decimal" id="incomeBaselineInput" data-action="income-baseline">
+      </div>
+      <div class="help">Used to check whether the weekly savings target is achievable after fixed bills.</div>
+      <div class="field">
+        <label>Landing funds available for Canada setup (NZD)</label>
+        <input type="number" inputmode="decimal" id="landingFundsInput" data-action="landing-funds">
+      </div>
+      <div class="help">Compared against setup costs (converted at FX rate) to flag any landing-cost gap.</div>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section class="view" id="view-timeline">
+    <div class="progress-bar"><div class="progress-bar-fill" id="taskProgress" style="width: 9%;"></div></div>
+    <div class="sort-row">
+      <button class="sort-btn active" id="sortByDefault">Default order</button>
+      <button class="sort-btn" id="sortByDue">Sort by due date</button>
+      <button class="sort-btn" id="toggleOverdue">Show overdue only</button>
+    </div>
+    <div class="filters" id="taskFilters"><button data-filter="All" class="active">All (34)</button><button data-filter="Ben" class="">Ben</button><button data-filter="Ainsley" class="">Ainsley</button><button data-filter="Both" class="">Both</button><button data-filter="Ainsley &amp; Ben" class="">Ainsley &amp; Ben</button></div>
+    <div class="card">
+      <div id="taskList"><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t01"><div class="txt" data-action="task-expand" data-id="t01"><div>Finalise NZ citizenship application</div><div class="twhen">ASAP</div><div class="tnote">Prioritise so passport renewal can follow</div></div><select class="who-select" data-action="task-who" data-id="t01"><option value="Ben">Ben</option><option value="Ainsley" selected="">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t01" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t01" title="Delete permanently">×</button></div><div class="task done"><input type="checkbox" data-action="task-toggle" data-id="t02" checked=""><div class="txt" data-action="task-expand" data-id="t02"><div>Ainsley's PR sponsorship biometrics &amp; photos in Auckland</div><div class="twhen">ASAP</div><div class="tnote">Send to IRCC Canada once complete - keep tracking number</div></div><select class="who-select" data-action="task-who" data-id="t02"><option value="Ben">Ben</option><option value="Ainsley" selected="">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t02" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t02" title="Delete permanently">×</button></div><div class="task done"><input type="checkbox" data-action="task-toggle" data-id="t03" checked=""><div class="txt" data-action="task-expand" data-id="t03"><div>Confirm both kids hold valid Canadian citizenship certificates</div><div class="twhen">ASAP</div><div class="tnote">Required before applying for their Canadian passports</div></div><select class="who-select" data-action="task-who" data-id="t03"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t03" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t03" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t04"><div class="txt" data-action="task-expand" data-id="t04"><div>Apply for kids' Canadian passports</div><div class="twhen">Aug 2026</div><div class="tnote">Processing can take 8-12+ weeks - apply ASAP</div></div><select class="who-select" data-action="task-who" data-id="t04"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t04" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t04" title="Delete permanently">×</button></div><div class="task done"><input type="checkbox" data-action="task-toggle" data-id="t05" checked=""><div class="txt" data-action="task-expand" data-id="t05"><div>Check Ben's Canadian passport expiry &amp; renew if needed</div><div class="twhen">Aug 2026</div><div class="tnote">Renew if expiring within 6 months of travel date</div></div><select class="who-select" data-action="task-who" data-id="t05"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t05" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t05" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t06"><div class="txt" data-action="task-expand" data-id="t06"><div>Check Ainsley's NZ passport (once citizen)</div><div class="twhen">Sep 2026</div><div class="tnote">Not required to enter Canada on PR but useful as backup ID</div></div><select class="who-select" data-action="task-who" data-id="t06"><option value="Ben">Ben</option><option value="Ainsley" selected="">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t06" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t06" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t07"><div class="txt" data-action="task-expand" data-id="t07"><div>Monitor Ainsley's PR application status (IRCC account)</div><div class="twhen">Ongoing</div><div class="tnote">Approval timeline varies - this is on the critical path for the move date</div></div><select class="who-select" data-action="task-who" data-id="t07"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben" selected="">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t07" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t07" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t08"><div class="txt" data-action="task-expand" data-id="t08"><div>Notify landlord of intended move-out date (check notice period)</div><div class="twhen">6 mo before</div><div class="tnote">Confirm notice period in tenancy agreement - usually 21-28 days in NZ</div></div><select class="who-select" data-action="task-who" data-id="t08"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t08" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t08" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t09"><div class="txt" data-action="task-expand" data-id="t09"><div>Get quotes for storage (NZ) - decide what's worth storing vs selling</div><div class="twhen">4-5 mo before</div><div class="tnote">Compare cost of storing vs selling &amp; rebuying in Canada</div></div><select class="who-select" data-action="task-who" data-id="t09"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t09" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t09" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t10"><div class="txt" data-action="task-expand" data-id="t10"><div>Get quotes for international shipping/freight (if any)</div><div class="twhen">4-5 mo before</div><div class="tnote">Often cheaper to sell most furniture &amp; ship only sentimental/valuable items</div></div><select class="who-select" data-action="task-who" data-id="t10"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t10" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t10" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t11"><div class="txt" data-action="task-expand" data-id="t11"><div>List cars for sale (Ains &amp; Ben)</div><div class="twhen">3-4 mo before</div><div class="tnote">Plan to sell close to departure but allow buffer in case of delays</div></div><select class="who-select" data-action="task-who" data-id="t11"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t11" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t11" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t12"><div class="txt" data-action="task-expand" data-id="t12"><div>Cancel/transfer NZ subscriptions near move date</div><div class="twhen">3-4 mo before</div><div class="tnote">Spotify, Netflix, Gym, MS Office - see Weekly Budget notes</div></div><select class="who-select" data-action="task-who" data-id="t12"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t12" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t12" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t13"><div class="txt" data-action="task-expand" data-id="t13"><div>Book one-way flights to Canada</div><div class="twhen">3 mo before</div><div class="tnote">Consider flexible/changeable fares given visa timing risk</div></div><select class="who-select" data-action="task-who" data-id="t13"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t13" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t13" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t14"><div class="txt" data-action="task-expand" data-id="t14"><div>Research childcare/school enrolment in Nanaimo</div><div class="twhen">3 mo before</div><div class="tnote">BC daycare waitlists often 6-12+ months - start early even if dates shift</div></div><select class="who-select" data-action="task-who" data-id="t14"><option value="Ben">Ben</option><option value="Ainsley" selected="">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t14" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t14" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t15"><div class="txt" data-action="task-expand" data-id="t15"><div>Research Nanaimo rental market - set up alerts</div><div class="twhen">2-3 mo before</div><div class="tnote">Facebook groups, Realtor.ca etc. Aim for short-term first, then longer-term</div></div><select class="who-select" data-action="task-who" data-id="t15"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t15" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t15" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t16"><div class="txt" data-action="task-expand" data-id="t16"><div>Start job search for Ben (Nanaimo area)</div><div class="twhen">2-3 mo before</div><div class="tnote">Consider applying remotely before arrival - reference checks take time</div></div><select class="who-select" data-action="task-who" data-id="t16"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t16" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t16" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t17"><div class="txt" data-action="task-expand" data-id="t17"><div>Notify NZ utilities of disconnection date</div><div class="twhen">2 mo before</div><div class="tnote">Schedule final readings/disconnection close to move-out</div></div><select class="who-select" data-action="task-who" data-id="t17"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t17" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t17" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t18"><div class="txt" data-action="task-expand" data-id="t18"><div>Cancel/transfer NZ insurances - confirm refund of unused premium</div><div class="twhen">2 mo before</div><div class="tnote">Time cancellations with car sale &amp; move-out</div></div><select class="who-select" data-action="task-who" data-id="t18"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t18" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t18" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t19"><div class="txt" data-action="task-expand" data-id="t19"><div>Notify IRD / Work and Income of departure</div><div class="twhen">2 mo before</div><div class="tnote">Confirm final payment dates and any obligations on leaving NZ</div></div><select class="who-select" data-action="task-who" data-id="t19"><option value="Ben">Ben</option><option value="Ainsley" selected="">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t19" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t19" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t20"><div class="txt" data-action="task-expand" data-id="t20"><div>Medical/dental check-ups &amp; get records/prescriptions for kids</div><div class="twhen">6 wks before</div><div class="tnote">Useful for continuity of care once in BC (MSP wait period applies)</div></div><select class="who-select" data-action="task-who" data-id="t20"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t20" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t20" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t21"><div class="txt" data-action="task-expand" data-id="t21"><div>Confirm storage drop-off date &amp; book removalist (if storing)</div><div class="twhen">6 wks before</div></div><select class="who-select" data-action="task-who" data-id="t21"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t21" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t21" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t22"><div class="txt" data-action="task-expand" data-id="t22"><div>Sell cars - arrange interim transport for final weeks</div><div class="twhen">4-6 wks before</div><div class="tnote">Budget for taxis/rideshare for final weeks if both cars sold early</div></div><select class="who-select" data-action="task-who" data-id="t22"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t22" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t22" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t23"><div class="txt" data-action="task-expand" data-id="t23"><div>Confirm flight details, baggage allowances, seat arrangements for kids</div><div class="twhen">4 wks before</div></div><select class="who-select" data-action="task-who" data-id="t23"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t23" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t23" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t24"><div class="txt" data-action="task-expand" data-id="t24"><div>Confirm Canadian bank account active &amp; accessible</div><div class="twhen">2-4 wks before</div><div class="tnote">Order debit card if needed / confirm online banking works from NZ</div></div><select class="who-select" data-action="task-who" data-id="t24"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t24" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t24" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t25"><div class="txt" data-action="task-expand" data-id="t25"><div>Final bond inspection booked with landlord</div><div class="twhen">2 wks before</div><div class="tnote">Aim for full bond refund - clean thoroughly, photograph condition</div></div><select class="who-select" data-action="task-who" data-id="t25"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t25" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t25" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t26"><div class="txt" data-action="task-expand" data-id="t26"><div>Redirect mail (NZ Post) &amp; update address for remaining accounts</div><div class="twhen">1-2 wks before</div></div><select class="who-select" data-action="task-who" data-id="t26"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t26" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t26" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t27"><div class="txt" data-action="task-expand" data-id="t27"><div>Pack carry-on essentials - passports, certificates, medical records</div><div class="twhen">1 wk before</div><div class="tnote">Keep all ID, marriage cert, kids' birth/citizenship certs together in carry-on</div></div><select class="who-select" data-action="task-who" data-id="t27"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t27" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t27" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t28"><div class="txt" data-action="task-expand" data-id="t28"><div>Final NZ bank withdrawals / leave small buffer for last direct debits</div><div class="twhen">Departure day</div></div><select class="who-select" data-action="task-who" data-id="t28"><option value="Ben" selected="">Ben</option><option value="Ainsley">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t28" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t28" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t29"><div class="txt" data-action="task-expand" data-id="t29"><div>Apply for BC Medical Services Plan (MSP) for whole family</div><div class="twhen">On arrival (Canada)</div><div class="tnote">There is often a waiting period for new residents - apply ASAP</div></div><select class="who-select" data-action="task-who" data-id="t29"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t29" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t29" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t30"><div class="txt" data-action="task-expand" data-id="t30"><div>Enrol eldest child in preschool/daycare or school (BC age rules)</div><div class="twhen">On arrival</div></div><select class="who-select" data-action="task-who" data-id="t30"><option value="Ben">Ben</option><option value="Ainsley" selected="">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t30" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t30" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t31"><div class="txt" data-action="task-expand" data-id="t31"><div>Update Canadian ID - driver's licences (ICBC), address with CRA</div><div class="twhen">On arrival</div></div><select class="who-select" data-action="task-who" data-id="t31"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t31" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t31" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t32"><div class="txt" data-action="task-expand" data-id="t32"><div>Buy used cars in/around Nanaimo</div><div class="twhen">0-3 mo after arrival</div><div class="tnote">Budget set on Costs tab</div></div><select class="who-select" data-action="task-who" data-id="t32"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t32" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t32" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t33"><div class="txt" data-action="task-expand" data-id="t33"><div>Secure longer-term rental once settled</div><div class="twhen">0-3 mo after arrival</div></div><select class="who-select" data-action="task-who" data-id="t33"><option value="Ben">Ben</option><option value="Ainsley">Ainsley</option><option value="Both" selected="">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t33" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t33" title="Delete permanently">×</button></div><div class="task"><input type="checkbox" data-action="task-toggle" data-id="t34"><div class="txt" data-action="task-expand" data-id="t34"><div>Ainsley's student loan repayment begins - confirm balance &amp; set up payments</div><div class="twhen">~6 mo after arrival</div><div class="tnote">Approx $8,000 NZD - confirm exact terms with loan provider</div></div><select class="who-select" data-action="task-who" data-id="t34"><option value="Ben">Ben</option><option value="Ainsley" selected="">Ainsley</option><option value="Both">Both</option><option value="Family">Family</option><option value="Ainsley &amp; Ben">Ainsley &amp; Ben</option></select><button class="del-btn" data-action="task-archive" data-id="t34" title="Archive">⎘</button><button class="del-btn" data-action="task-del" data-id="t34" title="Delete permanently">×</button></div></div>
+      <div class="add-row">
+        <input type="text" id="newTaskName" placeholder="Add a task…">
+        <button class="add-btn" id="addTask">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">People <span class="sub">who can tasks be assigned to</span></div>
+      <div id="peopleList"><div class="row"><div class="name">Ben</div><button class="del-btn" data-action="person-del" data-id="Ben" title="Remove from list">×</button></div><div class="row"><div class="name">Ainsley</div><button class="del-btn" data-action="person-del" data-id="Ainsley" title="Remove from list">×</button></div><div class="row"><div class="name">Both</div><button class="del-btn" data-action="person-del" data-id="Both" title="Remove from list">×</button></div><div class="row"><div class="name">Family<div class="note-text">Not currently assigned to any task</div></div><button class="del-btn" data-action="person-del" data-id="Family" title="Remove from list">×</button></div></div>
+      <div class="add-row">
+        <input type="text" id="newPersonName" placeholder="Add a person (e.g. Ainsley&#39;s mum)">
+        <button class="add-btn" id="addPerson">Add</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- COSTS -->
+  <section class="view" id="view-costs">
+    <div class="card">
+      <div class="card-title">Moving costs (NZD)</div>
+      <div id="movingCostsList"><div class="row"><div class="name"><div>Flights - Ben (one-way)</div><div class="note-text">Adjust for booking timing/sales</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="flightben" value="1200"><button class="del-btn" data-action="moving-archive" data-id="flightben" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="flightben" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Flights - Ainsley (one-way)</div><div class="note-text">Subject to PR approval timing</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="flightains" value="1200"><button class="del-btn" data-action="moving-archive" data-id="flightains" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="flightains" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Flights - Child 1 (age 4)</div><div class="note-text">Often discounted child fare</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="flightc1" value="900"><button class="del-btn" data-action="moving-archive" data-id="flightc1" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="flightc1" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Flights - Child 2 (under 2)</div><div class="note-text">Lap infant fare estimate</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="flightc2" value="250"><button class="del-btn" data-action="moving-archive" data-id="flightc2" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="flightc2" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Excess baggage / extra luggage fees</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="baggage" value="300"><button class="del-btn" data-action="moving-archive" data-id="baggage" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="baggage" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>International shipping (essentials only, if any)</div><div class="note-text">Skip or reduce if mostly selling belongings</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="shipping" value="1500"><button class="del-btn" data-action="moving-archive" data-id="shipping" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="shipping" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>NZ storage (final month, if needed before sale)</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="nzstorage" value="200"><button class="del-btn" data-action="moving-archive" data-id="nzstorage" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="nzstorage" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Passport fees - kids (x2 Canadian passports)</div><div class="note-text">Approx. CAD cost converted - confirm current IRCC fee</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="passports" value="230"><button class="del-btn" data-action="moving-archive" data-id="passports" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="passports" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>PR application / biometrics fees (remaining balance)</div><div class="note-text">Confirm what's already paid vs outstanding</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="prfees" value="300"><button class="del-btn" data-action="moving-archive" data-id="prfees" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="prfees" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Removalist / cleaning for bond return</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="removalist" value="250"><button class="del-btn" data-action="moving-archive" data-id="removalist" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="removalist" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Temp accommodation in Canada (1-2 wks)</div><div class="note-text">Airbnb/motel - adjust based on family size &amp; location</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="tempaccom" value="1800"><button class="del-btn" data-action="moving-archive" data-id="tempaccom" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="tempaccom" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Currency transfer fees (lump sum NZD→CAD)</div><div class="note-text">Compare Wise/OFX vs bank rates</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="moving-amount" data-id="transferlump" value="100"><button class="del-btn" data-action="moving-archive" data-id="transferlump" title="Archive">⎘</button><button class="del-btn" data-action="moving-del" data-id="transferlump" title="Delete permanently">×</button></div></div>
+      <div class="row total-row"><div class="name">Total</div><div id="movingCostsTotal">$8,230.00</div></div>
+      <div class="add-row">
+        <input type="text" id="newMovingCost" placeholder="New item">
+        <button class="add-btn" id="addMovingCost">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Canada setup costs (CAD)</div>
+      <div id="setupCostsList"><div class="row"><div class="name"><div>Rental - damage deposit (½ month's rent)</div><div class="note-text">BC max security deposit = 0.5x monthly rent</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="setup-amount" data-id="deposit" value="900"><button class="del-btn" data-action="setup-archive" data-id="deposit" title="Archive">⎘</button><button class="del-btn" data-action="setup-del" data-id="deposit" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Rental - first month's rent</div><div class="note-text">Nanaimo 2-3 bedroom average - confirm current market rate</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="setup-amount" data-id="firstrent" value="1800"><button class="del-btn" data-action="setup-archive" data-id="firstrent" title="Archive">⎘</button><button class="del-btn" data-action="setup-del" data-id="firstrent" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Used car #1 - purchase</div><div class="note-text">Reliable used car for commuting/family</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="setup-amount" data-id="car1" value="8000"><button class="del-btn" data-action="setup-archive" data-id="car1" title="Archive">⎘</button><button class="del-btn" data-action="setup-del" data-id="car1" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Used car #2 - purchase</div><div class="note-text">Second vehicle - may delay if budget tight</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="setup-amount" data-id="car2" value="5000"><button class="del-btn" data-action="setup-archive" data-id="car2" title="Archive">⎘</button><button class="del-btn" data-action="setup-del" data-id="car2" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Car insurance (ICBC) - first month, both</div><div class="note-text">Get a quote via ICBC once you have a BC address</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="setup-amount" data-id="carinsur" value="400"><button class="del-btn" data-action="setup-archive" data-id="carinsur" title="Archive">⎘</button><button class="del-btn" data-action="setup-del" data-id="carinsur" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Groceries &amp; essentials - first month</div><div class="note-text">Stocking up a new home from scratch</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="setup-amount" data-id="groceries1" value="1200"><button class="del-btn" data-action="setup-archive" data-id="groceries1" title="Archive">⎘</button><button class="del-btn" data-action="setup-del" data-id="groceries1" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Furniture &amp; household basics</div><div class="note-text">Beds, table, basic kitchen items - thrift/used to reduce cost</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="setup-amount" data-id="furniture" value="2000"><button class="del-btn" data-action="setup-archive" data-id="furniture" title="Archive">⎘</button><button class="del-btn" data-action="setup-del" data-id="furniture" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Daycare/preschool deposit - eldest child</div><div class="note-text">Confirm with chosen provider</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="setup-amount" data-id="daycare" value="500"><button class="del-btn" data-action="setup-archive" data-id="daycare" title="Archive">⎘</button><button class="del-btn" data-action="setup-del" data-id="daycare" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Phones/SIM setup (Canadian numbers)</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="setup-amount" data-id="sim" value="150"><button class="del-btn" data-action="setup-archive" data-id="sim" title="Archive">⎘</button><button class="del-btn" data-action="setup-del" data-id="sim" title="Delete permanently">×</button></div><div class="row"><div class="name"><div>Driver's licence conversion / ICBC fees</div><div class="note-text">NZ licence may convert directly - confirm with ICBC</div></div><input class="amount-input" type="number" inputmode="decimal" data-action="setup-amount" data-id="license" value="150"><button class="del-btn" data-action="setup-archive" data-id="license" title="Archive">⎘</button><button class="del-btn" data-action="setup-del" data-id="license" title="Delete permanently">×</button></div></div>
+      <div class="row total-row"><div class="name">Total (CAD)</div><div id="setupCostsTotal">CA$20,100.00</div></div>
+      <div class="row total-row"><div class="name">≈ in NZD at current rate</div><div id="setupCostsNZD">$24,216.87</div></div>
+      <div class="add-row">
+        <input type="text" id="newSetupCost" placeholder="New item">
+        <button class="add-btn" id="addSetupCost">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Exchange rate</div>
+      <div class="field">
+        <label>1 NZD = X CAD</label>
+        <input type="number" inputmode="decimal" step="0.001" id="fxRateInput" data-action="fx-rate">
+      </div>
+      <div class="help">Update this with the current rate when you check your numbers. Setup costs above are converted using this.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Move date &amp; currencies</div>
+      <div class="field"><label>Target move date</label><input type="date" id="moveDateInput" data-action="move-date"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Budget review notes</div>
+      <div class="field"><textarea id="costNotesInput" placeholder="Quotes received, things to confirm, decisions made…" data-action="cost-notes"></textarea></div>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button data-view="home" class="active"><span class="dot"></span>Home</button>
+  <button data-view="weekly"><span class="dot"></span>Weekly</button>
+  <button data-view="savings"><span class="dot"></span>Savings</button>
+  <button data-view="timeline" class=""><span class="dot"></span>Timeline</button>
+  <button data-view="costs"><span class="dot"></span>Costs</button>
+</nav>
+
+<script>
+/* =====================================================================
+   FIREBASE CONFIG — paste your values here to enable family sync
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD72kmzTVvCXcg4oDWXfYkwbfyLJKUC7G4",
+  authDomain: "peters--family-canada-move.firebaseapp.com",
+  projectId: "peters--family-canada-move",
+  storageBucket: "peters--family-canada-move.firebasestorage.app",
+  messagingSenderId: "231003100119",
+  appId: "1:231003100119:web:d63bc3751c4b3a42013192"
+};
+const SHARED_DOC = ["moveplans", "peters"];
+
+/* =====================================================================
+   DEFAULT DATA — seeded from the original spreadsheet
+   ===================================================================== */
+function uid(p){ return p + Math.random().toString(36).slice(2,8); }
+
+function defaultData(){
+  return {
+    meta:{
+      targetMoveDate:'2027-04-01',
+      fxRate:0.83,
+      costNotes:'',
+      activeScenario:'base',
+      reminderDays:[14,7,2],
+      dismissedReminders:[],
+      people:['Ben','Ainsley','Both','Family']
+    },
+    scenarios:[
+      {id:'base', label:'Base plan', isBase:true, overrides:{}}
+    ],
+    savings:{
+      goal:15000,
+      incomeBaseline:1458.45,
+      landingFunds:0,
+      accounts:[
+        {id:'nzcheq', name:'NZ Chequing (everyday)',             balance:1000, archived:false},
+        {id:'nzsav',  name:'NZ Savings Account',                 balance:3000, archived:false},
+        {id:'cadsav', name:'Canada Savings / Tax Refund Buffer',  balance:0, archived:false}
+      ],
+      debts:[
+        {id:'loc',         name:'Canada Line of Credit ($25,000 limit)',              balance:2900,  excludeFromGoal:false, archived:false},
+        {id:'studentloan', name:"Ainsley's Student Loan (post-Canada, ~6mo after landing)", balance:8000, excludeFromGoal:true, archived:false},
+        {id:'otherdebt',   name:'Other / Unexpected',                                balance:0,     excludeFromGoal:false, archived:false}
+      ]
+    },
+    weekly:{
+      fixed:[
+        {id:'rent',       section:'Bills',         name:'Rent',                amount:650.00, note:'', tag:'Priority', archived:false},
+        {id:'water',      section:'Bills',         name:'Water',               amount:14.00,  note:'', tag:'Priority', archived:false},
+        {id:'power',      section:'Bills',         name:'Power',               amount:56.00,  note:'Check for seasonal increases over winter', tag:'Priority', archived:false},
+        {id:'tithe',      section:'Bills',         name:'Tithe',               amount:0.00,   note:'', tag:'Optional', archived:false},
+        {id:'contents',   section:'Bills',         name:'Contents Insurance',  amount:15.96,  note:'Confirm policy end date vs move date - may get a refund', tag:'Priority', archived:false},
+        {id:'ainscar',    section:'Bills',         name:'Ains Car Insurance',  amount:12.67,  note:'Cancel when car is sold - check refund policy', tag:'Refundable', archived:false},
+        {id:'bencar',     section:'Bills',         name:'Ben Car Insurance',   amount:14.10,  note:'Cancel when car is sold - check refund policy', tag:'Refundable', archived:false},
+        {id:'childcare',  section:'Bills',         name:'Childcare',           amount:59.00,  note:'Will stop once kids are out of NZ daycare', tag:'Priority', archived:false},
+        {id:'ainsrego',   section:'Vehicles',      name:'Ains Rego',           amount:2.61,   note:"Don't renew if selling close to expiry", tag:'Refundable', archived:false},
+        {id:'benrego',    section:'Vehicles',      name:'Ben Rego',            amount:2.61,   note:"Don't renew if selling close to expiry", tag:'Refundable', archived:false},
+        {id:'ainswof',    section:'Vehicles',      name:'Ains WOF',            amount:10.00,  note:'', tag:'Refundable', archived:false},
+        {id:'benwof',     section:'Vehicles',      name:'Ben WOF',             amount:10.00,  note:'', tag:'Refundable', archived:false},
+        {id:'ruc',        section:'Vehicles',      name:'RUC - Ben',           amount:19.80,  note:'Road User Charges - stop topping up once car is sold', tag:'Refundable', archived:false},
+        {id:'internet',   section:'Subscriptions', name:'Internet',            amount:18.75,  note:'', tag:'Priority', archived:false},
+        {id:'spotify',    section:'Subscriptions', name:'Spotify',             amount:7.25,   note:'Could pause/downgrade pre-move to save', tag:'Optional', archived:false},
+        {id:'msoffice',   section:'Subscriptions', name:'MS Office',           amount:4.25,   note:'', tag:'Optional', archived:false},
+        {id:'ainsphone',  section:'Subscriptions', name:'Ains Phone',          amount:6.50,   note:'', tag:'Priority', archived:false},
+        {id:'benphone',   section:'Subscriptions', name:'Ben Phone',           amount:10.00,  note:'', tag:'Priority', archived:false},
+        {id:'bengym',     section:'Subscriptions', name:'Ben Gym',             amount:21.95,  note:'Consider cancelling 1-2 months before move', tag:'Optional', archived:false},
+        {id:'netflix',    section:'Subscriptions', name:'Netflix',             amount:8.50,   note:'Could pause/downgrade pre-move to save', tag:'Optional', archived:false},
+        {id:'locpayment', section:'Canada LOC',    name:'LOC Payment',         amount:10.00,  note:'Currently owing on LOC - see Savings tab', tag:'Priority', archived:false},
+        {id:'transferfee',section:'Canada LOC',    name:'Transfer Fee',        amount:5.00,   note:'Fee to send NZD → CAD', tag:'Priority', archived:false}
+      ],
+      variable:[
+        {id:'groceries', name:'Groceries',  defaultAmount:260},
+        {id:'petrol',    name:'Petrol',     defaultAmount:80},
+        {id:'misc',      name:'Misc.',      defaultAmount:60},
+        {id:'benfun',    name:'Ben Fun',    defaultAmount:30},
+        {id:'eatingout', name:'Eating Out', defaultAmount:50}
+      ],
+      actuals:{'2026-06-08':{income:1579.45}}
+    },
+    movingCosts:[
+      {id:'flightben',    name:'Flights - Ben (one-way)',                             amount:1200, note:'Adjust for booking timing/sales', archived:false},
+      {id:'flightains',   name:'Flights - Ainsley (one-way)',                         amount:1200, note:'Subject to PR approval timing', archived:false},
+      {id:'flightc1',     name:'Flights - Child 1 (age 4)',                           amount:900,  note:'Often discounted child fare', archived:false},
+      {id:'flightc2',     name:'Flights - Child 2 (under 2)',                         amount:250,  note:'Lap infant fare estimate', archived:false},
+      {id:'baggage',      name:'Excess baggage / extra luggage fees',                 amount:300,  note:'', archived:false},
+      {id:'shipping',     name:'International shipping (essentials only, if any)',   amount:1500, note:'Skip or reduce if mostly selling belongings', archived:false},
+      {id:'nzstorage',    name:'NZ storage (final month, if needed before sale)',     amount:200,  note:'', archived:false},
+      {id:'passports',    name:'Passport fees - kids (x2 Canadian passports)',        amount:230,  note:'Approx. CAD cost converted - confirm current IRCC fee', archived:false},
+      {id:'prfees',       name:'PR application / biometrics fees (remaining balance)',amount:300,  note:"Confirm what's already paid vs outstanding", archived:false},
+      {id:'removalist',   name:'Removalist / cleaning for bond return',               amount:250,  note:'', archived:false},
+      {id:'tempaccom',    name:'Temp accommodation in Canada (1-2 wks)',              amount:1800, note:'Airbnb/motel - adjust based on family size & location', archived:false},
+      {id:'transferlump', name:'Currency transfer fees (lump sum NZD→CAD)',           amount:100,  note:'Compare Wise/OFX vs bank rates', archived:false}
+    ],
+    setupCosts:[
+      {id:'deposit',    name:"Rental - damage deposit (½ month's rent)",  amount:900,  note:'BC max security deposit = 0.5x monthly rent', archived:false},
+      {id:'firstrent',  name:"Rental - first month's rent",               amount:1800, note:'Nanaimo 2-3 bedroom average - confirm current market rate', archived:false},
+      {id:'car1',       name:'Used car #1 - purchase',                   amount:8000, note:'Reliable used car for commuting/family', archived:false},
+      {id:'car2',       name:'Used car #2 - purchase',                   amount:5000, note:'Second vehicle - may delay if budget tight', archived:false},
+      {id:'carinsur',   name:'Car insurance (ICBC) - first month, both', amount:400,  note:'Get a quote via ICBC once you have a BC address', archived:false},
+      {id:'groceries1', name:'Groceries & essentials - first month',      amount:1200, note:'Stocking up a new home from scratch', archived:false},
+      {id:'furniture',  name:'Furniture & household basics',              amount:2000, note:'Beds, table, basic kitchen items - thrift/used to reduce cost', archived:false},
+      {id:'daycare',    name:'Daycare/preschool deposit - eldest child',  amount:500,  note:'Confirm with chosen provider', archived:false},
+      {id:'sim',        name:'Phones/SIM setup (Canadian numbers)',       amount:150,  note:'', archived:false},
+      {id:'license',    name:"Driver's licence conversion / ICBC fees",   amount:150,  note:'NZ licence may convert directly - confirm with ICBC', archived:false}
+    ],
+    tasks:[
+      {id:'t01',when:'ASAP',               title:'Finalise NZ citizenship application',                                      who:'Ben',          note:'Prioritise so passport renewal can follow',done:false,archived:false,dueDate:'2026-05-28',comments:[]},
+      {id:'t02',when:'ASAP',               title:"Ainsley's Canadian PR application - biometrics & photos in Auckland",      who:'Ainsley',      note:'Send to IRCC Canada once complete - keep tracking number. Ainsley is already an NZ citizen, applying for Canadian PR',done:false,archived:false,dueDate:'2026-05-28',comments:[]},
+      {id:'t03',when:'ASAP',               title:'Confirm both kids hold valid Canadian citizenship certificates',           who:'Ben',          note:'Required before applying for their Canadian passports',done:false,archived:false,dueDate:'2026-05-28',comments:[]},
+      {id:'t04',when:'Aug 2026',           title:"Apply for kids' Canadian passports",                                       who:'Ben',          note:'Processing can take 8-12+ weeks - apply ASAP',done:false,archived:false,dueDate:'2026-08-01',comments:[]},
+      {id:'t05',when:'Aug 2026',           title:"Check Ben's Canadian passport expiry & renew if needed",                   who:'Ben',          note:'Renew if expiring within 6 months of travel date',done:false,archived:false,dueDate:'2026-08-01',comments:[]},
+      {id:'t06',when:'Sep 2026',           title:"Check Ainsley's NZ passport is current",                                   who:'Ainsley',      note:'Not required to enter Canada on PR but useful as backup ID',done:false,archived:false,dueDate:'2026-09-01',comments:[]},
+      {id:'t07',when:'Ongoing',            title:"Monitor Ainsley's PR application status (IRCC account)",                   who:'Ainsley & Ben',note:'Approval timeline varies - this is on the critical path for the move date',done:false,archived:false,dueDate:'2027-02-04',comments:[]},
+      {id:'t08',when:'6 mo before',        title:'Notify landlord of intended move-out date (check notice period)',         who:'Ben',          note:'Confirm notice period in tenancy agreement - usually 21-28 days in NZ',done:false,archived:false,dueDate:'2026-10-01',comments:[]},
+      {id:'t09',when:'4-5 mo before',      title:"Get quotes for storage (NZ) - decide what's worth storing vs selling",    who:'Both',         note:'Compare cost of storing vs selling & rebuying in Canada',done:false,archived:false,dueDate:'2026-11-12',comments:[]},
+      {id:'t10',when:'4-5 mo before',      title:'Get quotes for international shipping/freight (if any)',                  who:'Both',         note:'Often cheaper to sell most furniture & ship only sentimental/valuable items',done:false,archived:false,dueDate:'2026-11-12',comments:[]},
+      {id:'t11',when:'3-4 mo before',      title:'List cars for sale (Ains & Ben)',                                          who:'Both',         note:'Plan to sell close to departure but allow buffer in case of delays',done:false,archived:false,dueDate:'2026-12-17',comments:[]},
+      {id:'t12',when:'3-4 mo before',      title:'Cancel/transfer NZ subscriptions near move date',                         who:'Both',         note:'Spotify, Netflix, Gym, MS Office - see Weekly Budget notes',done:false,archived:false,dueDate:'2026-12-17',comments:[]},
+      {id:'t13',when:'3 mo before',        title:'Book one-way flights to Canada',                                           who:'Ben',          note:'Consider flexible/changeable fares given visa timing risk',done:false,archived:false,dueDate:'2026-12-31',comments:[]},
+      {id:'t14',when:'3 mo before',        title:'Research childcare/school enrolment in Nanaimo',                          who:'Ainsley',      note:'BC daycare waitlists often 6-12+ months - start early even if dates shift',done:false,archived:false,dueDate:'2026-12-31',comments:[]},
+      {id:'t15',when:'2-3 mo before',      title:'Research Nanaimo rental market - set up alerts',                          who:'Both',         note:'Facebook groups, Realtor.ca etc. Aim for short-term first, then longer-term',done:false,archived:false,dueDate:'2027-01-14',comments:[]},
+      {id:'t16',when:'2-3 mo before',      title:'Start job search for Ben (Nanaimo area)',                                  who:'Ben',          note:'Consider applying remotely before arrival - reference checks take time',done:false,archived:false,dueDate:'2027-01-14',comments:[]},
+      {id:'t17',when:'2 mo before',        title:'Notify NZ utilities of disconnection date',                               who:'Ben',          note:'Schedule final readings/disconnection close to move-out',done:false,archived:false,dueDate:'2027-01-28',comments:[]},
+      {id:'t18',when:'2 mo before',        title:'Cancel/transfer NZ insurances - confirm refund of unused premium',        who:'Ben',          note:'Time cancellations with car sale & move-out',done:false,archived:false,dueDate:'2027-01-28',comments:[]},
+      {id:'t19',when:'2 mo before',        title:'Notify IRD / Work and Income of departure',                               who:'Ainsley',      note:'Confirm final payment dates and any obligations on leaving NZ',done:false,archived:false,dueDate:'2027-01-28',comments:[]},
+      {id:'t20',when:'6 wks before',       title:'Medical/dental check-ups & get records/prescriptions for kids',          who:'Both',         note:'Useful for continuity of care once in BC (MSP wait period applies)',done:false,archived:false,dueDate:'2027-02-18',comments:[]},
+      {id:'t21',when:'6 wks before',       title:'Confirm storage drop-off date & book removalist (if storing)',           who:'Ben',          note:'',done:false,archived:false,dueDate:'2027-02-18',comments:[]},
+      {id:'t22',when:'4-6 wks before',     title:'Sell cars - arrange interim transport for final weeks',                   who:'Both',         note:'Budget for taxis/rideshare for final weeks if both cars sold early',done:false,archived:false,dueDate:'2027-02-25',comments:[]},
+      {id:'t23',when:'4 wks before',       title:'Confirm flight details, baggage allowances, seat arrangements for kids', who:'Both',         note:'',done:false,archived:false,dueDate:'2027-03-04',comments:[]},
+      {id:'t24',when:'2-4 wks before',     title:'Confirm Canadian bank account active & accessible',                      who:'Ben',          note:'Order debit card if needed / confirm online banking works from NZ',done:false,archived:false,dueDate:'2027-03-11',comments:[]},
+      {id:'t25',when:'2 wks before',       title:'Final bond inspection booked with landlord',                             who:'Ben',          note:'Aim for full bond refund - clean thoroughly, photograph condition',done:false,archived:false,dueDate:'2027-03-18',comments:[]},
+      {id:'t26',when:'1-2 wks before',     title:'Redirect mail (NZ Post) & update address for remaining accounts',        who:'Both',         note:'',done:false,archived:false,dueDate:'2027-03-22',comments:[]},
+      {id:'t27',when:'1 wk before',        title:'Pack carry-on essentials - passports, certificates, medical records',    who:'Both',         note:"Keep all ID, marriage cert, kids' birth/citizenship certs together in carry-on",done:false,archived:false,dueDate:'2027-03-25',comments:[]},
+      {id:'t28',when:'Departure day',      title:"Final NZ bank withdrawals / leave small buffer for last direct debits",  who:'Ben',          note:'',done:false,archived:false,dueDate:'2027-04-01',comments:[]},
+      {id:'t29',when:'On arrival (Canada)','title':'Apply for BC Medical Services Plan (MSP) for whole family',            who:'Both',         note:'There is often a waiting period for new residents - apply ASAP',done:false,archived:false,dueDate:'2027-04-08',comments:[]},
+      {id:'t30',when:'On arrival',         title:'Enrol eldest child in preschool/daycare or school (BC age rules)',       who:'Ainsley',      note:'',done:false,archived:false,dueDate:'2027-04-08',comments:[]},
+      {id:'t31',when:'On arrival',         title:"Update Canadian ID - driver's licences (ICBC), address with CRA",        who:'Both',         note:'',done:false,archived:false,dueDate:'2027-04-08',comments:[]},
+      {id:'t32',when:'0-3 mo after arrival',title:'Buy used cars in/around Nanaimo',                                       who:'Both',         note:'Budget set on Costs tab',done:false,archived:false,dueDate:'2027-05-13',comments:[]},
+      {id:'t33',when:'0-3 mo after arrival',title:'Secure longer-term rental once settled',                                who:'Both',         note:'',done:false,archived:false,dueDate:'2027-05-13',comments:[]},
+      {id:'t34',when:'~6 mo after arrival', title:"Ainsley's student loan repayment begins - confirm balance & set up payments", who:'Ainsley', note:'Approx $8,000 NZD - confirm exact terms with loan provider',done:false,archived:false,dueDate:'2027-09-30',comments:[]}
+    ]
+  };
+}
+
+/* =====================================================================
+   STATE & PERSISTENCE
+   ===================================================================== */
+let state = null;
+let db = null, docRef = null, saveTimer = null;
+let activeView = 'home';
+let activeFilter = 'All';
+let currentWeekISO = mondayOf(new Date());
+let expandedTaskId = null;
+let activeBillTagFilter = 'All';
+let taskSortMode = 'default';
+let taskShowOverdueOnly = false;
+let commentAuthorDraft = {};
+
+function mondayOf(d){
+  const date = new Date(d); const day = date.getDay();
+  date.setDate(date.getDate() + (day===0?-6:1)-day);
+  date.setHours(0,0,0,0); return isoDate(date);
+}
+function isoDate(d){ const dd=new Date(d); return dd.getFullYear()+'-'+pad2(dd.getMonth()+1)+'-'+pad2(dd.getDate()); }
+function pad2(n){ return n<10?'0'+n:''+n; }
+function addWeeks(iso,n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n*7); return isoDate(d); }
+function shortDate(iso){ const d=new Date(iso+'T00:00:00'); return d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]; }
+
+function loadLocal(){
+  try{ const r=localStorage.getItem('petersMovePlannerV2'); return r?deepMerge(JSON.parse(r),defaultData()):null; }
+  catch(e){ return null; }
+}
+function saveLocal(){
+  try{ localStorage.setItem('petersMovePlannerV2',JSON.stringify(state)); }catch(e){}
+}
+function deepMerge(saved,defaults){
+  const out=JSON.parse(JSON.stringify(defaults));
+  Object.keys(saved).forEach(function(k){ if(saved[k]!=null) out[k]=saved[k]; });
+  return out;
+}
+function scheduleSave(){
+  saveLocal();
+  if(!docRef) return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){
+    docRef.set(state).then(function(){ setSyncStatus(true); }).catch(function(e){ console.error(e); });
+  },600);
+}
+
+function initSync(){
+  if(FIREBASE_CONFIG.apiKey.indexOf('PASTE_')===0){
+    document.getElementById('setupBanner').classList.remove('hidden');
+    return;
+  }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.firestore();
+    docRef=db.collection(SHARED_DOC[0]).doc(SHARED_DOC[1]);
+    docRef.onSnapshot(function(snap){
+      if(snap.exists){
+        state=deepMerge(snap.data(),defaultData());
+        ensureDefaultPeople();
+      } else {
+        docRef.set(state);
+      }
+      saveLocal();
+      renderAll();
+      setSyncStatus(true);
+    },function(err){
+      console.error(err); setSyncStatus(false,'Sync error');
+    });
+  }catch(e){
+    console.error(e);
+    document.getElementById('setupBanner').classList.remove('hidden');
+  }
+}
+
+function setSyncStatus(on,label){
+  document.getElementById('syncDot').classList.toggle('on',!!on);
+  document.getElementById('syncText').textContent=label||(on?'Synced':'Local only');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); },2800);
+}
+
+/* =====================================================================
+   CALCULATIONS
+   ===================================================================== */
+function getActiveScenario(){
+  const id=state.meta.activeScenario||'base';
+  return (state.scenarios||[]).find(function(s){ return s.id===id; }) || {id:'base',label:'Base plan',isBase:true,overrides:{}};
+}
+// Returns the scenario override for a field if one is set and a non-base scenario is active,
+// otherwise returns the real stored value. Base plan math is always untouched by this.
+function getEffectiveValue(field, realValue){
+  const scenario=getActiveScenario();
+  if(scenario.isBase) return realValue;
+  const ov=scenario.overrides||{};
+  return (ov[field]!==undefined && ov[field]!==null && ov[field]!=='') ? Number(ov[field]) : realValue;
+}
+
+function weeksRemaining(){
+  const move=new Date(state.meta.targetMoveDate+'T00:00:00');
+  const now=new Date(); now.setHours(0,0,0,0);
+  return Math.max(Math.ceil((move-now)/(7*24*60*60*1000)),0);
+}
+function totalCash(){ return (state.savings.accounts||[]).filter(function(a){ return !a.archived; }).reduce(function(s,a){ return s+(Number(a.balance)||0); },0); }
+function totalDebt(){
+  return (state.savings.debts||[]).filter(function(d){ return !d.archived; }).reduce(function(s,d){
+    return d.excludeFromGoal?s:s+(Number(d.balance)||0); },0);
+}
+function effectiveGoal(){ return getEffectiveValue('savingsGoal', Number(state.savings.goal)||0); }
+function effectiveIncomeBaseline(){ return getEffectiveValue('incomeBaseline', Number(state.savings.incomeBaseline)||0); }
+function effectiveFxRate(){ return getEffectiveValue('fxRate', Number(state.meta.fxRate)||0.83); }
+function effectiveLandingFunds(){ return getEffectiveValue('landingFunds', Number(state.savings.landingFunds)||0); }
+function stillNeeded(){ return Math.max(effectiveGoal()-totalCash(),0); }
+function weeklyTarget(){ return stillNeeded()/Math.max(weeksRemaining(),1); }
+function totalFixed(){ return (state.weekly.fixed||[]).filter(function(b){ return !b.archived; }).reduce(function(s,b){ return s+(Number(b.amount)||0); },0); }
+function availForSavings(){ return Math.max(effectiveIncomeBaseline()-totalFixed(),0); }
+function weeklyShortfall(){ return weeklyTarget()-availForSavings(); }
+function totalMoving(){ return (state.movingCosts||[]).filter(function(x){ return !x.archived; }).reduce(function(s,x){ return s+(Number(x.amount)||0); },0); }
+function totalSetupCAD(){ return (state.setupCosts||[]).filter(function(x){ return !x.archived; }).reduce(function(s,x){ return s+(Number(x.amount)||0); },0); }
+function setupNZD(){ return totalSetupCAD()/(effectiveFxRate()||0.83); }
+function landingGap(){ return setupNZD()-effectiveLandingFunds(); }
+
+function fmtNZD(n){ return '$'+comma(Number(n).toFixed(2)); }
+function fmtCAD(n){ return 'CA$'+comma(Number(n).toFixed(2)); }
+function comma(s){ const parts=s.split('.'); parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,','); return parts.join('.'); }
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function renderAll(){ renderHome(); renderWeekly(); renderSavings(); renderTimeline(); renderCosts(); }
+
+function getUpcomingReminders(){
+  const today=todayISO();
+  const reminderDays=state.meta.reminderDays||[14,7,2];
+  const maxWindow=Math.max.apply(null,reminderDays);
+  const dismissed=state.meta.dismissedReminders||[];
+  return (state.tasks||[])
+    .filter(function(t){ return !t.archived && !t.done && t.dueDate; })
+    .map(function(t){
+      const daysUntil=Math.round((new Date(t.dueDate+'T00:00:00')-new Date(today+'T00:00:00'))/(24*60*60*1000));
+      return {task:t, daysUntil:daysUntil};
+    })
+    .filter(function(x){ return x.daysUntil<=maxWindow && !dismissed.includes(x.task.id); })
+    .sort(function(a,b){ return a.daysUntil-b.daysUntil; });
+}
+
+function renderReminderBanner(){
+  const upcoming=getUpcomingReminders();
+  const el=document.getElementById('reminderBanner');
+  if(!upcoming.length){ el.classList.add('hidden'); el.innerHTML=''; return; }
+  el.classList.remove('hidden');
+  const itemsHTML=upcoming.slice(0,5).map(function(x){
+    const label = x.daysUntil<0 ? 'Overdue \u00b7 '+Math.abs(x.daysUntil)+'d ago'
+                : x.daysUntil===0 ? 'Due today'
+                : 'Due in '+x.daysUntil+'d';
+    return '<div class="rb-item">'+esc(x.task.title)+' \u2014 <strong>'+label+'</strong></div>';
+  }).join('');
+  el.innerHTML='<div class="rb-title"><span>Coming up</span><button class="rb-dismiss" id="dismissReminders">\u00d7</button></div>'+itemsHTML;
+}
+
+function maybeNotifyBrowser(){
+  if(typeof Notification==='undefined') return;
+  const upcoming=getUpcomingReminders();
+  if(!upcoming.length) return;
+  if(Notification.permission==='granted'){
+    const x=upcoming[0];
+    const label = x.daysUntil<=0 ? 'overdue' : 'due in '+x.daysUntil+' day(s)';
+    new Notification('Move planner reminder',{body:x.task.title+' \u2014 '+label});
+  }
+}
+
+function renderScenarios(){
+  const scenarios=state.scenarios||[];
+  const activeId=state.meta.activeScenario||'base';
+
+  // Switcher chips
+  document.getElementById('scenarioRow').innerHTML=scenarios.map(function(s){
+    return '<button class="scenario-chip'+(s.id===activeId?' active':'')+'" data-action="scenario-switch" data-id="'+s.id+'">'+esc(s.label)+'</button>';
+  }).join('');
+
+  // Editable fields for the currently active non-base scenario
+  const active=getActiveScenario();
+  const fieldsEl=document.getElementById('scenarioFields');
+  if(active.isBase){
+    fieldsEl.innerHTML='<div class="empty">You\'re viewing the base plan. Pick or add a scenario above to try different numbers without changing your real data.</div>';
+    return;
+  }
+  const ov=active.overrides||{};
+  fieldsEl.innerHTML=
+    '<div class="field"><label>Savings goal (NZD) \u2014 real value: '+fmtNZD(state.savings.goal)+'</label>'+
+      '<input type="number" inputmode="decimal" class="scenario-input" data-action="scenario-override" data-field="savingsGoal" data-id="'+active.id+'" value="'+(ov.savingsGoal!==undefined?ov.savingsGoal:'')+'" placeholder="'+state.savings.goal+'"></div>'+
+    '<div class="field"><label>Weekly income baseline (NZD) \u2014 real value: '+fmtNZD(state.savings.incomeBaseline)+'</label>'+
+      '<input type="number" inputmode="decimal" class="scenario-input" data-action="scenario-override" data-field="incomeBaseline" data-id="'+active.id+'" value="'+(ov.incomeBaseline!==undefined?ov.incomeBaseline:'')+'" placeholder="'+state.savings.incomeBaseline+'"></div>'+
+    '<div class="field"><label>FX rate (1 NZD = X CAD) \u2014 real value: '+state.meta.fxRate+'</label>'+
+      '<input type="number" inputmode="decimal" step="0.001" class="scenario-input" data-action="scenario-override" data-field="fxRate" data-id="'+active.id+'" value="'+(ov.fxRate!==undefined?ov.fxRate:'')+'" placeholder="'+state.meta.fxRate+'"></div>'+
+    '<div class="field"><label>Landing funds available (NZD) \u2014 real value: '+fmtNZD(state.savings.landingFunds)+'</label>'+
+      '<input type="number" inputmode="decimal" class="scenario-input" data-action="scenario-override" data-field="landingFunds" data-id="'+active.id+'" value="'+(ov.landingFunds!==undefined?ov.landingFunds:'')+'" placeholder="'+state.savings.landingFunds+'"></div>'+
+    '<div class="help">Leave a field blank to use the real value shown above it. These numbers only affect this scenario \u2014 your actual data on the Savings and Costs tabs is never changed.</div>'+
+    '<button class="del-btn" data-action="scenario-delete" data-id="'+active.id+'" style="font-size:.8rem">Delete this scenario</button>';
+}
+
+function renderHome(){
+  const wr=weeksRemaining();
+  const move=new Date(state.meta.targetMoveDate+'T00:00:00');
+  const activeScenario=getActiveScenario();
+  document.getElementById('homeMoveLabel').innerHTML='Move date · '+move.toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'})+
+    (activeScenario.isBase?'':'<span class="scenario-badge">'+esc(activeScenario.label)+'</span>');
+  document.getElementById('homeWeeks').textContent=wr;
+  document.getElementById('homeWeekSub').textContent=(wr===1?'week':'weeks')+' to go · NZD → CAD';
+  // rough progress: weeks elapsed since earliest task date (approx 52 weeks out)
+  const totalSpan=Math.max(wr,1); const pct=Math.max(2,Math.min(98,(1-wr/Math.max(wr+8,52))*100));
+  document.getElementById('homeBar').style.width=pct+'%';
+  document.getElementById('hpCash').textContent=fmtNZD(totalCash());
+  document.getElementById('hpDebt').textContent=fmtNZD(totalDebt());
+  document.getElementById('hpTarget').textContent=fmtNZD(weeklyTarget());
+
+  renderReminderBanner();
+  renderScenarios();
+
+  const flags=[];
+  const sf=weeklyShortfall();
+  if(sf>0.5){
+    flags.push({type:'alert',mark:'!',text:'Saving '+fmtNZD(weeklyTarget())+' a week needs '+fmtNZD(sf)+' more than what\'s left from income after fixed bills ('+fmtNZD(availForSavings())+' available).'});
+  } else {
+    flags.push({type:'ok',mark:'✓',text:'Weekly savings target fits within income after fixed bills, with '+fmtNZD(Math.abs(sf))+' to spare each week.'});
+  }
+  const lg=landingGap();
+  if(lg>0.5){
+    flags.push({type:'alert',mark:'!',text:'Canada setup costs convert to approx '+fmtNZD(setupNZD())+' NZD, which is '+fmtNZD(lg)+' more than the landing funds set aside.'});
+  } else {
+    flags.push({type:'ok',mark:'✓',text:'Landing funds cover estimated Canada setup costs, with '+fmtNZD(Math.abs(lg))+' NZD to spare.'});
+  }
+  const done=(state.tasks||[]).filter(function(t){ return t.done; }).length;
+  const total=(state.tasks||[]).length;
+  flags.push({type:'warn',mark:'→',text:done+' of '+total+' timeline tasks done. '+((total-done)+' remaining.')});
+  document.getElementById('homeFlags').innerHTML=flags.map(function(f){
+    return '<div class="flag '+f.type+'"><div class="mark">'+f.mark+'</div><div>'+f.text+'</div></div>';
+  }).join('');
+}
+
+function renderWeekly(){
+  const weekEnd=addWeeks(currentWeekISO,1);
+  const endDayBefore=new Date(weekEnd+'T00:00:00'); endDayBefore.setDate(endDayBefore.getDate()-1);
+  document.getElementById('weekRangeLabel').textContent=shortDate(currentWeekISO)+' – '+shortDate(isoDate(endDayBefore));
+  let actuals=state.weekly.actuals[currentWeekISO];
+  const isNewWeek = !actuals;
+  if(!actuals){
+    // Feature 4: carry forward previous week's variable spending as defaults (editable),
+    // but never overwrite a week that already has saved actuals.
+    const prevISO=addWeeks(currentWeekISO,-1);
+    const prevActuals=state.weekly.actuals[prevISO];
+    actuals={};
+    if(prevActuals){
+      (state.weekly.variable||[]).forEach(function(v){
+        if(prevActuals[v.id]!==undefined) actuals[v.id]=prevActuals[v.id];
+      });
+    }
+  }
+  document.getElementById('weekIncomeInput').value=actuals.income||'';
+
+  // Fixed bills grouped, filtered by tag, archive-aware
+  const visibleBills=(state.weekly.fixed||[]).filter(function(b){ return !b.archived; });
+  const archivedBills=(state.weekly.fixed||[]).filter(function(b){ return b.archived; });
+  const tagFiltered = activeBillTagFilter==='All' ? visibleBills : visibleBills.filter(function(b){ return b.tag===activeBillTagFilter; });
+
+  const tagOptions=['All','Priority','Optional','Refundable'];
+  document.getElementById('billTagFilters').innerHTML=tagOptions.map(function(tag){
+    return '<button data-billtag="'+escAttr(tag)+'" class="'+(tag===activeBillTagFilter?'active':'')+'">'+tag+'</button>';
+  }).join('');
+
+  const sections={};
+  tagFiltered.forEach(function(b){
+    if(!sections[b.section]) sections[b.section]=[];
+    sections[b.section].push(b);
+  });
+  let fixedHTML='';
+  Object.keys(sections).forEach(function(sec){
+    fixedHTML+='<div class="section-label">'+esc(sec)+'</div>';
+    fixedHTML+=sections[sec].map(function(b){
+      return '<div class="row"><div class="name"><div>'+esc(b.name)+'</div>'+
+        (b.note?'<div class="note-text">'+esc(b.note)+'</div>':'')+
+        '<select class="tag-select" data-action="bill-tag" data-id="'+b.id+'">'+
+          ['Priority','Optional','Refundable'].map(function(opt){
+            return '<option value="'+opt+'" '+(b.tag===opt?'selected':'')+'>'+opt+'</option>';
+          }).join('')+
+        '</select>'+
+        '</div><input class="amount-input" type="number" inputmode="decimal" data-action="fixed-amount" data-id="'+b.id+'" value="'+b.amount+'">'+
+        '<button class="del-btn" data-action="bill-archive" data-id="'+b.id+'" title="Archive">\u2398</button>'+
+        '<button class="del-btn" data-action="bill-del" data-id="'+b.id+'" title="Delete permanently">\u00d7</button>'+
+        '</div>';
+    }).join('');
+  });
+  if(archivedBills.length){
+    fixedHTML+='<div class="archived-toggle" data-action="bill-togglearchived">Show '+archivedBills.length+' archived &#9662;</div>';
+    fixedHTML+='<div class="archived-list hidden" data-archived-list="bill">'+archivedBills.map(function(b){
+      return '<div class="row archived-row"><div class="name">'+esc(b.name)+'</div>'+
+        '<div class="archived-amount">'+b.amount+'</div>'+
+        '<button class="del-btn" data-action="bill-restore" data-id="'+b.id+'" title="Restore">\u21a9</button>'+
+        '<button class="del-btn" data-action="bill-del" data-id="'+b.id+'" title="Delete permanently">\u00d7</button>'+
+        '</div>';
+    }).join('')+'</div>';
+  }
+  document.getElementById('fixedList').innerHTML=fixedHTML||'<div class="empty">No fixed bills match this filter.</div>';
+
+  // Variable, with carryover indicator and budget variance
+  document.getElementById('variableList').innerHTML=(state.weekly.variable||[]).map(function(v){
+    const val=actuals[v.id]!==undefined?actuals[v.id]:'';
+    const carried = isNewWeek && actuals[v.id]!==undefined;
+    const budgeted = Number(v.defaultAmount)||0;
+    const actual = Number(val)||0;
+    let varianceHTML='';
+    if(val!==''&&budgeted>0){
+      const diff=actual-budgeted;
+      if(Math.abs(diff)>=1){
+        const over=diff>0;
+        varianceHTML='<span class="variance-tag '+(over?'over':'under')+'">'+(over?'+':'-')+'$'+Math.abs(diff).toFixed(0)+' vs $'+budgeted.toFixed(0)+' budget</span>';
+      }
+    }
+    return '<div class="row"><div class="name">'+esc(v.name)+
+      (carried?'<div class="note-text">Carried from last week \u2014 adjust if needed</div>':'')+
+      (varianceHTML?'<div>'+varianceHTML+'</div>':'<div class="note-text">Budget: $'+budgeted.toFixed(0)+'</div>')+
+      '</div>'+
+      '<input class="amount-input" type="number" inputmode="decimal" data-action="variable-amount" data-id="'+v.id+'" value="'+val+'"></div>';
+  }).join('');
+
+  // Summary
+  const fixedTotal=totalFixed();
+  const varTotal=(state.weekly.variable||[]).reduce(function(s,v){ return s+(Number(actuals[v.id])||0); },0);
+  const varBudgetTotal=(state.weekly.variable||[]).reduce(function(s,v){ return s+(Number(v.defaultAmount)||0); },0);
+  const varDiff=varTotal-varBudgetTotal;
+  const income=Number(actuals.income)||0;
+  const total=fixedTotal+varTotal;
+  const movingFund=income-total;
+  document.getElementById('weekTotalLabel').textContent='Total spend '+fmtNZD(total);
+  document.getElementById('weekSummary').innerHTML=
+    '<div class="row"><div class="name">Fixed bills</div><div>'+fmtNZD(fixedTotal)+'</div></div>'+
+    '<div class="row"><div class="name">Variable spending</div><div>'+fmtNZD(varTotal)+
+      (Math.abs(varDiff)>=1?' <span class="variance-tag '+(varDiff>0?'over':'under')+'">'+(varDiff>0?'+':'-')+fmtNZD(Math.abs(varDiff))+' vs budget</span>':'')+
+      '</div></div>'+
+    '<div class="row"><div class="name">Total spend</div><div>'+fmtNZD(total)+'</div></div>'+
+    '<div class="row"><div class="name">Income entered</div><div>'+fmtNZD(income)+'</div></div>'+
+    '<div class="row total-row"><div class="name">Moving fund this week</div><div class="'+(movingFund<0?'value neg':'')+'">'+(income?fmtNZD(movingFund):'—')+'</div></div>';
+}
+
+function renderSavings(){
+  document.getElementById('accountsList').innerHTML=renderBalanceList(state.savings.accounts,'account');
+  document.getElementById('debtsList').innerHTML=renderBalanceList(state.savings.debts,'debt',true);
+  document.getElementById('savingsGoalInput').value=state.savings.goal||0;
+  document.getElementById('incomeBaselineInput').value=state.savings.incomeBaseline||0;
+  document.getElementById('landingFundsInput').value=state.savings.landingFunds||0;
+}
+function renderBalanceList(arr,kind,showExclude){
+  const visible=(arr||[]).filter(function(x){ return !x.archived; });
+  const archivedItems=(arr||[]).filter(function(x){ return x.archived; });
+  let html='';
+  if(!visible.length){
+    html+='<div class="empty">Nothing here yet.</div>';
+  } else {
+    html+=visible.map(function(item){
+      return '<div class="row"><div class="name">'+
+        '<div>'+esc(item.name)+'</div>'+
+        (item.note?'<div class="note-text">'+esc(item.note)+'</div>':'')+
+        (showExclude&&item.excludeFromGoal?'<div class="note-text" style="color:var(--warm)">Excluded from savings goal calc</div>':'')+
+        '</div>'+
+        '<input class="amount-input" type="number" inputmode="decimal" data-action="'+kind+'-balance" data-id="'+item.id+'" value="'+item.balance+'">'+
+        '<button class="del-btn" data-action="'+kind+'-archive" data-id="'+item.id+'" title="Archive">\u2398</button>'+
+        '<button class="del-btn" data-action="'+kind+'-del" data-id="'+item.id+'" title="Delete permanently">\u00d7</button>'+
+        '</div>';
+    }).join('');
+  }
+  if(archivedItems.length){
+    html+='<div class="archived-toggle" data-action="'+kind+'-togglearchived">Show '+archivedItems.length+' archived &#9662;</div>';
+    html+='<div class="archived-list hidden" data-archived-list="'+kind+'">'+archivedItems.map(function(item){
+      return '<div class="row archived-row"><div class="name"><div>'+esc(item.name)+'</div></div>'+
+        '<div class="archived-amount">'+item.balance+'</div>'+
+        '<button class="del-btn" data-action="'+kind+'-restore" data-id="'+item.id+'" title="Restore">\u21a9</button>'+
+        '<button class="del-btn" data-action="'+kind+'-del" data-id="'+item.id+'" title="Delete permanently">\u00d7</button>'+
+        '</div>';
+    }).join('')+'</div>';
+  }
+  return html;
+}
+
+function todayISO(){ return isoDate(new Date()); }
+
+function dueDateStatus(dueDate, done){
+  if(!dueDate || done) return '';
+  const today=todayISO();
+  if(dueDate < today) return 'overdue';
+  const soon=isoDate(addWeeks(today,0)); // placeholder, real check below
+  const daysUntil = (new Date(dueDate+'T00:00:00') - new Date(today+'T00:00:00'))/(24*60*60*1000);
+  if(daysUntil<=14) return 'soon';
+  return '';
+}
+function fmtDueDate(dueDate){
+  if(!dueDate) return '';
+  const d=new Date(dueDate+'T00:00:00');
+  return d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+}
+
+function updateSortButtons(){
+  document.getElementById('sortByDefault').classList.toggle('active',taskSortMode==='default');
+  document.getElementById('sortByDue').classList.toggle('active',taskSortMode==='due');
+  document.getElementById('toggleOverdue').classList.toggle('active',taskShowOverdueOnly);
+}
+
+function renderTimeline(){
+  const allTasks=state.tasks||[];
+  const tasks=allTasks.filter(function(t){ return !t.archived; });
+  const archivedTasks=allTasks.filter(function(t){ return t.archived; });
+  const done=tasks.filter(function(t){ return t.done; }).length;
+  document.getElementById('taskProgress').style.width=(tasks.length?Math.round(done/tasks.length*100):0)+'%';
+
+  const peopleList=state.meta.people||['Ben','Ainsley','Both'];
+  const uniquePeople=[];
+  tasks.forEach(function(t){ if(t.who && !uniquePeople.includes(t.who)) uniquePeople.push(t.who); });
+  const allFilters=['All'].concat(peopleList.filter(function(p){ return uniquePeople.includes(p); }));
+  // include any legacy/unlisted names already on tasks so nothing disappears from the filter bar
+  uniquePeople.forEach(function(p){ if(!allFilters.includes(p)) allFilters.push(p); });
+  document.getElementById('taskFilters').innerHTML=allFilters.map(function(p){
+    return '<button data-filter="'+escAttr(p)+'" class="'+(p===activeFilter?'active':'')+'">'+(p==='All'?'All ('+tasks.length+')':p)+'</button>';
+  }).join('');
+
+  let filtered=activeFilter==='All'?tasks.slice():tasks.filter(function(t){ return t.who===activeFilter; });
+  if(taskSortMode==='due'){
+    filtered.sort(function(a,b){
+      if(!a.dueDate&&!b.dueDate) return 0;
+      if(!a.dueDate) return 1;
+      if(!b.dueDate) return -1;
+      return a.dueDate.localeCompare(b.dueDate);
+    });
+  }
+  if(taskShowOverdueOnly){
+    const today=todayISO();
+    filtered=filtered.filter(function(t){ return !t.done && t.dueDate && t.dueDate<today; });
+  }
+
+  // people options for the assignee dropdown: configured list, plus 'Both', plus any legacy name still in use
+  const assigneeOptions=peopleList.slice();
+  if(!assigneeOptions.includes('Both')) assigneeOptions.push('Both');
+  uniquePeople.forEach(function(p){ if(!assigneeOptions.includes(p)) assigneeOptions.push(p); });
+
+  let html='';
+  if(!filtered.length){
+    html='<div class="empty">No tasks in this view.</div>';
+  } else {
+    html=filtered.map(function(t){
+      const expanded=expandedTaskId===t.id;
+      const status=dueDateStatus(t.dueDate,t.done);
+      const dueLabel = t.dueDate ? '<span class="due-badge due-'+(status||'normal')+'">'+(status==='overdue'?'Overdue \u00b7 ':'')+fmtDueDate(t.dueDate)+'</span>' : '';
+      const comments=t.comments||[];
+      const whoSelect='<select class="who-select" data-action="task-who" data-id="'+t.id+'">'+
+        assigneeOptions.map(function(p){ return '<option value="'+escAttr(p)+'" '+(p===t.who?'selected':'')+'>'+esc(p)+'</option>'; }).join('')+
+        (assigneeOptions.includes(t.who)?'':'<option value="'+escAttr(t.who)+'" selected>'+esc(t.who)+'</option>')+
+        '</select>';
+      const commentAuthorOptions=peopleList.map(function(p){ return '<option value="'+escAttr(p)+'">'+esc(p)+'</option>'; }).join('');
+      return '<div class="task'+(t.done?' done':'')+(status?' status-'+status:'')+'">'+
+        '<input type="checkbox" data-action="task-toggle" data-id="'+t.id+'" '+(t.done?'checked':'')+'>'+
+        '<div class="txt" data-action="task-expand" data-id="'+t.id+'">'+
+          '<div>'+esc(t.title)+'</div>'+
+          '<div class="twhen">'+esc(t.when)+(dueLabel?' '+dueLabel:'')+'</div>'+
+          (!expanded&&t.note?'<div class="tnote">'+esc(t.note)+'</div>':'')+
+          (!expanded&&comments.length?'<div class="comment-count">\ud83d\udcac '+comments.length+' comment'+(comments.length>1?'s':'')+'</div>':'')+
+          (expanded?(
+            '<div class="expand-panel">'+
+            '<label class="mini-label">Due date</label>'+
+            '<input type="date" class="date-input" data-action="task-duedate" data-id="'+t.id+'" value="'+(t.dueDate||'')+'">'+
+            '<label class="mini-label">Note</label>'+
+            '<textarea class="note-edit" data-action="task-note-edit" data-id="'+t.id+'" placeholder="Add a note...">'+esc(t.note||'')+'</textarea>'+
+            '<label class="mini-label">Comments</label>'+
+            '<div class="comments-list">'+(comments.length?comments.map(function(c){
+              return '<div class="comment-item"><span class="comment-author">'+esc(c.author)+':</span> '+esc(c.text)+'</div>';
+            }).join(''):'<div class="empty" style="padding:4px 0">No comments yet</div>')+'</div>'+
+            '<div class="add-row">'+
+              '<select class="tag-select" data-action="comment-author-select" data-id="'+t.id+'">'+commentAuthorOptions+'</select>'+
+              '<input type="text" class="comment-input" data-action="comment-text" data-id="'+t.id+'" placeholder="Leave a note for the other person...">'+
+              '<button class="add-btn" data-action="comment-add" data-id="'+t.id+'">Post</button>'+
+            '</div>'+
+            '</div>'
+          ):'')+
+        '</div>'+
+        whoSelect+
+        '<button class="del-btn" data-action="task-archive" data-id="'+t.id+'" title="Archive">\u2398</button>'+
+        '<button class="del-btn" data-action="task-del" data-id="'+t.id+'" title="Delete permanently">\u00d7</button>'+
+      '</div>';
+    }).join('');
+  }
+  if(archivedTasks.length){
+    html+='<div class="archived-toggle" data-action="task-togglearchived">Show '+archivedTasks.length+' archived &#9662;</div>';
+    html+='<div class="archived-list hidden" data-archived-list="task">'+archivedTasks.map(function(t){
+      return '<div class="task archived-row"><div class="txt"><div>'+esc(t.title)+'</div></div>'+
+        '<button class="del-btn" data-action="task-restore" data-id="'+t.id+'" title="Restore">\u21a9</button>'+
+        '<button class="del-btn" data-action="task-del" data-id="'+t.id+'" title="Delete permanently">\u00d7</button>'+
+        '</div>';
+    }).join('')+'</div>';
+  }
+  document.getElementById('taskList').innerHTML=html;
+  renderPeopleList();
+}
+
+function renderPeopleList(){
+  const people=state.meta.people||['Ben','Ainsley','Both'];
+  document.getElementById('peopleList').innerHTML=people.map(function(p){
+    const inUse=(state.tasks||[]).some(function(t){ return t.who===p; });
+    return '<div class="row"><div class="name">'+esc(p)+(inUse?'':'<div class="note-text">Not currently assigned to any task</div>')+'</div>'+
+      '<button class="del-btn" data-action="person-del" data-id="'+escAttr(p)+'" title="Remove from list">\u00d7</button></div>';
+  }).join('')||'<div class="empty">No people added yet.</div>';
+}
+
+function renderCosts(){
+  document.getElementById('movingCostsList').innerHTML=renderCostList(state.movingCosts,'moving');
+  document.getElementById('setupCostsList').innerHTML=renderCostList(state.setupCosts,'setup');
+  document.getElementById('movingCostsTotal').textContent=fmtNZD(totalMoving());
+  document.getElementById('setupCostsTotal').textContent=fmtCAD(totalSetupCAD());
+  document.getElementById('setupCostsNZD').textContent=fmtNZD(setupNZD());
+  document.getElementById('fxRateInput').value=state.meta.fxRate||0.83;
+  document.getElementById('moveDateInput').value=state.meta.targetMoveDate;
+  document.getElementById('costNotesInput').value=state.meta.costNotes||'';
+}
+function renderCostList(arr,kind){
+  const visible=(arr||[]).filter(function(x){ return !x.archived; });
+  const archivedItems=(arr||[]).filter(function(x){ return x.archived; });
+  let html='';
+  if(!visible.length){
+    html+='<div class="empty">Nothing here yet.</div>';
+  } else {
+    html+=visible.map(function(item){
+      return '<div class="row"><div class="name">'+
+        '<div>'+esc(item.name)+'</div>'+
+        (item.note?'<div class="note-text">'+esc(item.note)+'</div>':'')+
+        '</div>'+
+        '<input class="amount-input" type="number" inputmode="decimal" data-action="'+kind+'-amount" data-id="'+item.id+'" value="'+item.amount+'">'+
+        '<button class="del-btn" data-action="'+kind+'-archive" data-id="'+item.id+'" title="Archive">\u2398</button>'+
+        '<button class="del-btn" data-action="'+kind+'-del" data-id="'+item.id+'" title="Delete permanently">\u00d7</button>'+
+      '</div>';
+    }).join('');
+  }
+  if(archivedItems.length){
+    html+='<div class="archived-toggle" data-action="'+kind+'-togglearchived">Show '+archivedItems.length+' archived &#9662;</div>';
+    html+='<div class="archived-list hidden" data-archived-list="'+kind+'">'+archivedItems.map(function(item){
+      return '<div class="row archived-row"><div class="name">'+esc(item.name)+'</div>'+
+        '<div class="archived-amount">'+item.amount+'</div>'+
+        '<button class="del-btn" data-action="'+kind+'-restore" data-id="'+item.id+'" title="Restore">\u21a9</button>'+
+        '<button class="del-btn" data-action="'+kind+'-del" data-id="'+item.id+'" title="Delete permanently">\u00d7</button>'+
+        '</div>';
+    }).join('')+'</div>';
+  }
+  return html;
+}
+
+function esc(s){ return String(s||'').replace(/[&<>]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+
+function csvField(v){
+  const s=String(v===undefined||v===null?'':v);
+  if(/[",\n]/.test(s)) return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+function exportDataAsCSV(){
+  const lines=[];
+  lines.push('PETERS FAMILY MOVE PLANNER - DATA EXPORT');
+  lines.push('Exported,'+new Date().toLocaleString());
+  lines.push('');
+
+  lines.push('TASKS');
+  lines.push(['ID','When','Title','Who','Note','Done','Archived'].map(csvField).join(','));
+  (state.tasks||[]).forEach(function(t){
+    lines.push([t.id,t.when,t.title,t.who,t.note,t.done,t.archived].map(csvField).join(','));
+  });
+  lines.push('');
+
+  lines.push('FIXED BILLS (weekly, NZD)');
+  lines.push(['ID','Section','Name','Amount','Tag','Note','Archived'].map(csvField).join(','));
+  (state.weekly.fixed||[]).forEach(function(b){
+    lines.push([b.id,b.section,b.name,b.amount,b.tag,b.note,b.archived].map(csvField).join(','));
+  });
+  lines.push('');
+
+  lines.push('SAVINGS ACCOUNTS (NZD)');
+  lines.push(['ID','Name','Balance','Archived'].map(csvField).join(','));
+  (state.savings.accounts||[]).forEach(function(a){
+    lines.push([a.id,a.name,a.balance,a.archived].map(csvField).join(','));
+  });
+  lines.push('');
+
+  lines.push('DEBTS (NZD)');
+  lines.push(['ID','Name','Balance','Excluded from goal','Archived'].map(csvField).join(','));
+  (state.savings.debts||[]).forEach(function(d){
+    lines.push([d.id,d.name,d.balance,d.excludeFromGoal,d.archived].map(csvField).join(','));
+  });
+  lines.push('');
+
+  lines.push('MOVING COSTS (NZD)');
+  lines.push(['ID','Name','Amount','Note','Archived'].map(csvField).join(','));
+  (state.movingCosts||[]).forEach(function(m){
+    lines.push([m.id,m.name,m.amount,m.note,m.archived].map(csvField).join(','));
+  });
+  lines.push('');
+
+  lines.push('CANADA SETUP COSTS (CAD)');
+  lines.push(['ID','Name','Amount','Note','Archived'].map(csvField).join(','));
+  (state.setupCosts||[]).forEach(function(s){
+    lines.push([s.id,s.name,s.amount,s.note,s.archived].map(csvField).join(','));
+  });
+  lines.push('');
+
+  lines.push('SUMMARY');
+  lines.push(['Move date',state.meta.targetMoveDate].map(csvField).join(','));
+  lines.push(['Weeks remaining',weeksRemaining()].map(csvField).join(','));
+  lines.push(['Total cash NZD',totalCash().toFixed(2)].map(csvField).join(','));
+  lines.push(['Total debt NZD',totalDebt().toFixed(2)].map(csvField).join(','));
+  lines.push(['Savings goal NZD',state.savings.goal].map(csvField).join(','));
+  lines.push(['Weekly savings target NZD',weeklyTarget().toFixed(2)].map(csvField).join(','));
+  lines.push(['Total moving costs NZD',totalMoving().toFixed(2)].map(csvField).join(','));
+  lines.push(['Total setup costs CAD',totalSetupCAD().toFixed(2)].map(csvField).join(','));
+  lines.push(['Total setup costs NZD (converted)',setupNZD().toFixed(2)].map(csvField).join(','));
+
+  const csv=lines.join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='peters-move-planner-export-'+isoDate(new Date())+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV downloaded');
+}
+function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
+
+/* =====================================================================
+   EVENTS
+   ===================================================================== */
+function findById(arr,id){ for(let i=0;i<arr.length;i++) if(arr[i].id===id) return arr[i]; return null; }
+function removeById(arr,id){ const i=arr.findIndex(function(x){ return x.id===id; }); if(i>-1) arr.splice(i,1); }
+function removeById2(arr,value){ const i=arr.indexOf(value); if(i>-1) arr.splice(i,1); }
+
+document.addEventListener('input',function(e){
+  const t=e.target, a=t.dataset.action, id=t.dataset.id;
+  if(!a) return;
+  let item;
+  switch(a){
+    case 'fixed-amount':
+      item=findById(state.weekly.fixed,id);
+      if(item){ item.amount=Number(t.value)||0; renderWeekly(); renderHome(); scheduleSave(); } return;
+    case 'variable-amount':
+      if(!state.weekly.actuals[currentWeekISO]) state.weekly.actuals[currentWeekISO]={};
+      state.weekly.actuals[currentWeekISO][id]=Number(t.value)||0;
+      renderWeekly(); scheduleSave(); return;
+    case 'week-income':
+      if(!state.weekly.actuals[currentWeekISO]) state.weekly.actuals[currentWeekISO]={};
+      state.weekly.actuals[currentWeekISO].income=Number(t.value)||0;
+      renderWeekly(); scheduleSave(); return;
+    case 'account-balance':
+      item=findById(state.savings.accounts,id);
+      if(item){ item.balance=Number(t.value)||0; renderHome(); scheduleSave(); } return;
+    case 'debt-balance':
+      item=findById(state.savings.debts,id);
+      if(item){ item.balance=Number(t.value)||0; renderHome(); scheduleSave(); } return;
+    case 'moving-amount':
+      item=findById(state.movingCosts,id);
+      if(item){ item.amount=Number(t.value)||0; renderCosts(); scheduleSave(); } return;
+    case 'setup-amount':
+      item=findById(state.setupCosts,id);
+      if(item){ item.amount=Number(t.value)||0; renderCosts(); renderHome(); scheduleSave(); } return;
+    case 'savings-goal':
+      state.savings.goal=Number(t.value)||0; renderHome(); scheduleSave(); return;
+    case 'income-baseline':
+      state.savings.incomeBaseline=Number(t.value)||0; renderHome(); scheduleSave(); return;
+    case 'landing-funds':
+      state.savings.landingFunds=Number(t.value)||0; renderHome(); scheduleSave(); return;
+    case 'fx-rate':
+      state.meta.fxRate=Number(t.value)||0.83; renderCosts(); renderHome(); scheduleSave(); return;
+    case 'move-date':
+      state.meta.targetMoveDate=t.value; renderHome(); scheduleSave(); return;
+    case 'cost-notes':
+      state.meta.costNotes=t.value; scheduleSave(); return;
+    case 'task-note-edit':
+      item=findById(state.tasks,id);
+      if(item){ item.note=t.value; scheduleSave(); } return;
+    case 'task-duedate':
+      item=findById(state.tasks,id);
+      if(item){ item.dueDate=t.value; renderTimeline(); renderHome(); scheduleSave(); } return;
+    case 'comment-text':
+      commentAuthorDraft[id]=commentAuthorDraft[id]||{};
+      commentAuthorDraft[id].text=t.value;
+      return;
+    case 'scenario-override':
+      const scenario=(state.scenarios||[]).find(function(s){ return s.id===id; });
+      if(scenario){
+        const field=t.dataset.field;
+        scenario.overrides=scenario.overrides||{};
+        if(t.value===''){ delete scenario.overrides[field]; }
+        else { scenario.overrides[field]=Number(t.value); }
+        renderHome(); scheduleSave();
+      }
+      return;
+  }
+});
+
+// Wire up direct field inputs
+document.getElementById('weekIncomeInput').dataset.action='week-income';
+document.getElementById('savingsGoalInput').dataset.action='savings-goal';
+document.getElementById('incomeBaselineInput').dataset.action='income-baseline';
+document.getElementById('landingFundsInput').dataset.action='landing-funds';
+document.getElementById('fxRateInput').dataset.action='fx-rate';
+document.getElementById('moveDateInput').dataset.action='move-date';
+document.getElementById('costNotesInput').dataset.action='cost-notes';
+
+document.addEventListener('change',function(e){
+  const t=e.target, a=t.dataset.action, id=t.dataset.id;
+  if(a==='task-toggle'){
+    const task=findById(state.tasks,id);
+    if(task){ task.done=t.checked; renderTimeline(); renderHome(); scheduleSave(); }
+  } else if(a==='bill-tag'){
+    const item=findById(state.weekly.fixed,id);
+    if(item){ item.tag=t.value; renderWeekly(); scheduleSave(); }
+  } else if(a==='comment-author-select'){
+    commentAuthorDraft[id]=commentAuthorDraft[id]||{};
+    commentAuthorDraft[id].author=t.value;
+  } else if(a==='task-who'){
+    const task=findById(state.tasks,id);
+    if(task){ task.who=t.value; renderTimeline(); scheduleSave(); }
+  }
+});
+
+document.addEventListener('click',function(e){
+  const actionEl = e.target.closest('[data-action]');
+  const t = actionEl || e.target;
+  const a=t.dataset.action, id=t.dataset.id;
+
+  // Generic archive / restore / delete handling for every item-type prefix
+  const archivePairs=[
+    ['moving','movingCosts'],['setup','setupCosts'],
+    ['account','savings.accounts'],['debt','savings.debts'],
+    ['task','tasks'],['bill','weekly.fixed']
+  ];
+  for(let i=0;i<archivePairs.length;i++){
+    const prefix=archivePairs[i][0], path=archivePairs[i][1];
+    const arr=path.indexOf('.')>-1?state[path.split('.')[0]][path.split('.')[1]]:state[path];
+    if(a===prefix+'-archive'){
+      const item=findById(arr,id);
+      if(item){ item.archived=true; renderAll(); scheduleSave(); }
+      return;
+    }
+    if(a===prefix+'-restore'){
+      const item=findById(arr,id);
+      if(item){ item.archived=false; renderAll(); scheduleSave(); }
+      return;
+    }
+    if(a===prefix+'-del'){
+      if(confirm('Delete this permanently? This cannot be undone.')){
+        removeById(arr,id); renderAll(); scheduleSave();
+      }
+      return;
+    }
+    if(a===prefix+'-togglearchived'){
+      const list=document.querySelector('[data-archived-list="'+prefix+'"]');
+      if(list){
+        list.classList.toggle('hidden');
+        t.innerHTML='Show '+list.querySelectorAll('.archived-row').length+' archived '+(list.classList.contains('hidden')?'&#9662;':'&#9652;');
+      }
+      return;
+    }
+  }
+
+  if(a==='task-expand'){
+    // Don't collapse/toggle if the click originated inside the expanded edit panel itself
+    if(e.target.closest('.expand-panel')) return;
+    expandedTaskId = (expandedTaskId===id) ? null : id;
+    renderTimeline();
+    return;
+  }
+
+  if(a==='comment-add'){
+    const draft=commentAuthorDraft[id]||{};
+    const text=(draft.text||'').trim();
+    if(!text) return;
+    const author=draft.author||'Ben';
+    const task=findById(state.tasks,id);
+    if(task){
+      task.comments=task.comments||[];
+      task.comments.push({author:author,text:text,ts:Date.now()});
+      commentAuthorDraft[id]={author:author,text:''};
+      renderTimeline(); scheduleSave();
+    }
+    return;
+  }
+
+  if(t.id==='sortByDefault'){ taskSortMode='default'; renderTimeline(); updateSortButtons(); return; }
+  if(t.id==='sortByDue'){ taskSortMode='due'; renderTimeline(); updateSortButtons(); return; }
+  if(t.id==='toggleOverdue'){ taskShowOverdueOnly=!taskShowOverdueOnly; renderTimeline(); updateSortButtons(); return; }
+
+  if(t.id==='weekPrev'){ currentWeekISO=addWeeks(currentWeekISO,-1); renderWeekly(); return; }
+  if(t.id==='weekNext'){ currentWeekISO=addWeeks(currentWeekISO,1); renderWeekly(); return; }
+
+  if(t.id==='addBill'){
+    const inp=document.getElementById('newBillName');
+    if(!inp.value.trim()) return;
+    state.weekly.fixed.push({id:uid('b'),section:'Bills',name:inp.value.trim(),amount:0,note:'',tag:'Optional',archived:false});
+    inp.value=''; renderWeekly(); renderHome(); scheduleSave(); return;
+  }
+
+  if(t.id==='addAccount'){
+    const inp=document.getElementById('newAccountName');
+    if(!inp.value.trim()) return;
+    state.savings.accounts.push({id:uid('a'),name:inp.value.trim(),balance:0,archived:false});
+    inp.value=''; renderSavings(); renderHome(); scheduleSave(); return;
+  }
+  if(t.id==='addDebt'){
+    const inp=document.getElementById('newDebtName');
+    if(!inp.value.trim()) return;
+    state.savings.debts.push({id:uid('d'),name:inp.value.trim(),balance:0,excludeFromGoal:false,archived:false});
+    inp.value=''; renderSavings(); renderHome(); scheduleSave(); return;
+  }
+  if(t.id==='addTask'){
+    const inp=document.getElementById('newTaskName');
+    if(!inp.value.trim()) return;
+    state.tasks.push({id:uid('t'),title:inp.value.trim(),when:'',who:'Both',note:'',done:false,archived:false});
+    inp.value=''; renderTimeline(); renderHome(); scheduleSave(); return;
+  }
+  if(t.id==='addPerson'){
+    const inp=document.getElementById('newPersonName');
+    const name=inp.value.trim();
+    if(!name) return;
+    state.meta.people=state.meta.people||['Ben','Ainsley','Both'];
+    if(!state.meta.people.includes(name)){
+      state.meta.people.push(name);
+      inp.value='';
+      renderTimeline();
+      scheduleSave();
+    } else {
+      showToast('Already on the list');
+    }
+    return;
+  }
+  if(a==='person-del'){
+    const inUse=(state.tasks||[]).some(function(t2){ return t2.who===id; });
+    if(inUse){
+      showToast('Reassign their tasks first, then remove');
+      return;
+    }
+    removeById2(state.meta.people,id);
+    renderTimeline();
+    scheduleSave();
+    return;
+  }
+  if(t.id==='addMovingCost'){
+    const inp=document.getElementById('newMovingCost');
+    if(!inp.value.trim()) return;
+    state.movingCosts.push({id:uid('m'),name:inp.value.trim(),amount:0,note:'',archived:false});
+    inp.value=''; renderCosts(); scheduleSave(); return;
+  }
+  if(t.id==='addSetupCost'){
+    const inp=document.getElementById('newSetupCost');
+    if(!inp.value.trim()) return;
+    state.setupCosts.push({id:uid('s'),name:inp.value.trim(),amount:0,note:'',archived:false});
+    inp.value=''; renderCosts(); renderHome(); scheduleSave(); return;
+  }
+
+  if(t.id==='exportCSV'){
+    exportDataAsCSV();
+    return;
+  }
+
+  if(t.id==='enableNotifs'){
+    if(typeof Notification==='undefined'){
+      showToast('Browser notifications not supported here');
+    } else if(Notification.permission==='granted'){
+      showToast('Reminders already on');
+      maybeNotifyBrowser();
+    } else {
+      Notification.requestPermission().then(function(perm){
+        if(perm==='granted'){ showToast('Reminders turned on'); maybeNotifyBrowser(); }
+        else { showToast('Permission not granted'); }
+      });
+    }
+    return;
+  }
+
+  if(t.id==='dismissReminders'){
+    const upcoming=getUpcomingReminders();
+    const ids=upcoming.map(function(x){ return x.task.id; });
+    state.meta.dismissedReminders=(state.meta.dismissedReminders||[]).concat(ids);
+    renderReminderBanner();
+    scheduleSave();
+    return;
+  }
+
+  if(a==='scenario-switch'){
+    state.meta.activeScenario=id;
+    renderAll();
+    scheduleSave();
+    return;
+  }
+
+  if(a==='scenario-delete'){
+    if(confirm('Delete this scenario? Your real data is never affected, this only removes the what-if numbers.')){
+      removeById(state.scenarios,id);
+      state.meta.activeScenario='base';
+      renderAll();
+      scheduleSave();
+    }
+    return;
+  }
+
+  if(t.id==='addScenario'){
+    const inp=document.getElementById('newScenarioName');
+    if(!inp.value.trim()) return;
+    const newId=uid('sc');
+    state.scenarios.push({id:newId,label:inp.value.trim(),isBase:false,overrides:{}});
+    state.meta.activeScenario=newId;
+    inp.value='';
+    renderAll();
+    scheduleSave();
+    return;
+  }
+
+  if(t.dataset.billtag!==undefined){
+    activeBillTagFilter=t.dataset.billtag;
+    renderWeekly();
+    return;
+  }
+
+  if(t.dataset.filter!==undefined){
+    activeFilter=t.dataset.filter; renderTimeline(); return;
+  }
+  if(t.id==='dismissSetup'){
+    document.getElementById('setupBanner').classList.add('hidden'); return;
+  }
+
+  const navBtn=t.closest('[data-view]');
+  if(navBtn){
+    activeView=navBtn.dataset.view;
+    document.querySelectorAll('.view').forEach(function(v){
+      v.classList.toggle('active',v.id==='view-'+activeView);
+    });
+    document.querySelectorAll('.tabbar button').forEach(function(b){
+      b.classList.toggle('active',b.dataset.view===activeView);
+    });
+  }
+});
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+function ensureDefaultPeople(){
+  if(!state.meta.people) state.meta.people=['Ben','Ainsley','Both','Family'];
+  if(!state.meta.people.includes('Family')) state.meta.people.push('Family');
+}
+
+state=loadLocal()||defaultData();
+ensureDefaultPeople();
+renderAll();
+updateSortButtons();
+setSyncStatus(false);
+initSync();
+</script>
+
+
+</body></html>
